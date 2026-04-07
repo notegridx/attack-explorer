@@ -3,6 +3,7 @@ import {
   cloneElement,
   isValidElement,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -118,54 +119,28 @@ function buildBreadcrumbs(
   });
 }
 
-function decorateCitationText(text: string): ReactNode[] {
-  const regex = /(\(Citation:\s*[^)]+\))/g;
-  const parts = text.split(regex);
-
-  return parts
-    .filter((part) => part.length > 0)
-    .map((part, index) => {
-      if (part.match(regex)) {
-        return (
-          <span key={`citation-${index}`} className="inline-citation">
-            {part}
-          </span>
-        );
-      }
-
-      return part;
-    });
+function normalizeReferenceKey(value: string) {
+  return value.trim().toLowerCase();
 }
 
-function decorateNode(node: ReactNode): ReactNode {
-  if (typeof node === "string") {
-    return decorateCitationText(node);
-  }
+function extractCitationName(citationText: string): string | null {
+  const match = citationText.match(/^\(Citation:\s*([^)]+)\)$/i);
+  return match ? match[1].trim() : null;
+}
 
-  if (Array.isArray(node)) {
-    return node.map((child, index) => (
-      <span key={index}>{decorateNode(child)}</span>
-    ));
-  }
+function buildReferenceLookup(references: ExternalReference[]) {
+  const lookup = new Map<string, ExternalReference>();
 
-  if (isValidElement<{ children?: ReactNode }>(node)) {
-    const originalChildren = node.props.children;
-
-    if (originalChildren == null) {
-      return node;
+  references.forEach((ref) => {
+    if (ref.source_name) {
+      lookup.set(normalizeReferenceKey(ref.source_name), ref);
     }
+    if (ref.external_id) {
+      lookup.set(normalizeReferenceKey(ref.external_id), ref);
+    }
+  });
 
-    const decoratedChildren = Children.map(originalChildren, (child) =>
-      decorateNode(child),
-    );
-
-    return cloneElement(node, {
-      ...node.props,
-      children: decoratedChildren,
-    });
-  }
-
-  return node;
+  return lookup;
 }
 
 function extractAttackExternalIdFromUrl(href: string): string | null {
@@ -191,6 +166,27 @@ function extractAttackExternalIdFromUrl(href: string): string | null {
   }
 }
 
+function isSelfMitreAttackReference(
+  ref: ExternalReference,
+  detailObjectExternalId?: string,
+) {
+  if (!detailObjectExternalId) {
+    return false;
+  }
+
+  if (ref.source_name !== "mitre-attack") {
+    return false;
+  }
+
+  const targetExternalId =
+    ref.url != null ? extractAttackExternalIdFromUrl(ref.url) : null;
+
+  return (
+    ref.external_id === detailObjectExternalId ||
+    targetExternalId === detailObjectExternalId
+  );
+}
+
 function findTechniqueObjectIdByExternalId(
   techniques: StixObject[],
   externalId: string,
@@ -204,13 +200,126 @@ function findTechniqueObjectIdByExternalId(
   return found?.id ?? null;
 }
 
+function decorateCitationText(
+  text: string,
+  resolveReference: (citationName: string) => ExternalReference | undefined,
+  onOpenInternalTechniqueLink: (externalId: string) => void,
+): ReactNode[] {
+  const regex = /(\(Citation:\s*[^)]+\))/g;
+  const parts = text.split(regex);
+
+  return parts
+    .filter((part) => part.length > 0)
+    .map((part, index) => {
+      if (!part.match(regex)) {
+        return part;
+      }
+
+      const citationName = extractCitationName(part);
+      const ref = citationName ? resolveReference(citationName) : undefined;
+      const label = citationName ?? part;
+      const targetExternalId =
+        ref?.url != null ? extractAttackExternalIdFromUrl(ref.url) : null;
+
+      if (targetExternalId) {
+        return (
+          <button
+            key={`citation-${index}`}
+            type="button"
+            className="citation-pill"
+            onClick={() => onOpenInternalTechniqueLink(targetExternalId)}
+            title={ref?.description ?? `Open ${targetExternalId}`}
+          >
+            {label}
+          </button>
+        );
+      }
+
+      if (ref?.url) {
+        return (
+          <a
+            key={`citation-${index}`}
+            className="citation-pill"
+            href={ref.url}
+            target="_blank"
+            rel="noreferrer"
+            title={ref.description ?? label}
+          >
+            {label}
+          </a>
+        );
+      }
+
+      return (
+        <span
+          key={`citation-${index}`}
+          className="citation-pill muted"
+          title={ref?.description ?? label}
+        >
+          {label}
+        </span>
+      );
+    });
+}
+
+function decorateNode(
+  node: ReactNode,
+  resolveReference: (citationName: string) => ExternalReference | undefined,
+  onOpenInternalTechniqueLink: (externalId: string) => void,
+): ReactNode {
+  if (typeof node === "string") {
+    return decorateCitationText(
+      node,
+      resolveReference,
+      onOpenInternalTechniqueLink,
+    );
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child, index) => (
+      <span key={index}>
+        {decorateNode(child, resolveReference, onOpenInternalTechniqueLink)}
+      </span>
+    ));
+  }
+
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    const originalChildren = node.props.children;
+
+    if (originalChildren == null) {
+      return node;
+    }
+
+    const decoratedChildren = Children.map(originalChildren, (child) =>
+      decorateNode(child, resolveReference, onOpenInternalTechniqueLink),
+    );
+
+    return cloneElement(node, {
+      ...node.props,
+      children: decoratedChildren,
+    });
+  }
+
+  return node;
+}
+
 function MarkdownDescription({
   content,
+  references,
   onOpenInternalTechniqueLink,
 }: {
   content: string;
+  references: ExternalReference[];
   onOpenInternalTechniqueLink: (externalId: string) => void;
 }) {
+  const referenceLookup = useMemo(
+    () => buildReferenceLookup(references),
+    [references],
+  );
+
+  const resolveReference = (citationName: string) =>
+    referenceLookup.get(normalizeReferenceKey(citationName));
+
   return (
     <ReactMarkdown
       components={{
@@ -237,8 +346,24 @@ function MarkdownDescription({
             </a>
           );
         },
-        p: ({ children }) => <p>{decorateNode(children)}</p>,
-        li: ({ children }) => <li>{decorateNode(children)}</li>,
+        p: ({ children }) => (
+          <p>
+            {decorateNode(
+              children,
+              resolveReference,
+              onOpenInternalTechniqueLink,
+            )}
+          </p>
+        ),
+        li: ({ children }) => (
+          <li>
+            {decorateNode(
+              children,
+              resolveReference,
+              onOpenInternalTechniqueLink,
+            )}
+          </li>
+        ),
       }}
     >
       {content}
@@ -329,6 +454,7 @@ export function TechniqueDetail() {
   const [navigationHistory, setNavigationHistory] = useState<NavigationEntry[]>(
     [],
   );
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -336,6 +462,10 @@ export function TechniqueDetail() {
     if (panelRef.current) {
       panelRef.current.scrollTop = 0;
     }
+  }, [selectedTechnique?.id, selectedObject?.objectId]);
+
+  useEffect(() => {
+    setSourcesExpanded(false);
   }, [selectedTechnique?.id, selectedObject?.objectId]);
 
   if (!dataset) {
@@ -350,8 +480,8 @@ export function TechniqueDetail() {
 
   const effectiveSelectedObjectId =
     selectedObject &&
-      selectedObject.rootTechniqueId === rootTechniqueId &&
-      dataset.objectsById[selectedObject.objectId]
+    selectedObject.rootTechniqueId === rootTechniqueId &&
+    dataset.objectsById[selectedObject.objectId]
       ? selectedObject.objectId
       : null;
 
@@ -360,7 +490,7 @@ export function TechniqueDetail() {
       entry.rootTechniqueId === rootTechniqueId &&
       Boolean(
         dataset.objectsById[entry.objectId] ||
-        entry.objectId === rootTechniqueId,
+          entry.objectId === rootTechniqueId,
       ),
   );
 
@@ -422,6 +552,7 @@ export function TechniqueDetail() {
     const index = effectiveHistory.findIndex(
       (entry) => entry.objectId === objectId,
     );
+
     if (index === -1) {
       setSelectedObject({
         rootTechniqueId,
@@ -437,13 +568,15 @@ export function TechniqueDetail() {
     });
   }
 
-  function openInternalTechniqueLink(externalId: string) {
-    if (!dataset) return;
+  const ds = dataset;
 
-    const targetObjectId = findTechniqueObjectIdByExternalId(
-      dataset.techniques,
-      externalId,
-    );
+function openInternalTechniqueLink(externalId: string) {
+  if (!ds) return;
+
+  const targetObjectId = findTechniqueObjectIdByExternalId(
+    ds.techniques,
+    externalId,
+  );
 
     if (!targetObjectId) return;
 
@@ -462,13 +595,15 @@ export function TechniqueDetail() {
   const externalId = getExternalId(detailObject);
   const groupedOutgoing = groupByRelationshipType(outgoingItems);
   const groupedIncoming = groupByRelationshipType(incomingItems);
-  const references = getExternalReferences(detailObject);
+  const references = getExternalReferences(detailObject).filter(
+    (ref) => !isSelfMitreAttackReference(ref, externalId),
+  );
 
   const tactics =
     detailObject.type === "attack-pattern"
       ? (detailObject.kill_chain_phases
-        ?.map((phase) => phase.phase_name)
-        .filter(Boolean) ?? [])
+          ?.map((phase) => phase.phase_name)
+          .filter(Boolean) ?? [])
       : [];
 
   const platforms = detailObject.x_mitre_platforms ?? [];
@@ -512,6 +647,7 @@ export function TechniqueDetail() {
         <div className="description">
           <MarkdownDescription
             content={detailObject.description ?? "No description available."}
+            references={references}
             onOpenInternalTechniqueLink={openInternalTechniqueLink}
           />
         </div>
@@ -519,53 +655,72 @@ export function TechniqueDetail() {
 
       {references.length > 0 && (
         <section className="reference-section">
-          <h3 className="reference-title">References</h3>
-          <div className="reference-list">
-            {references.map((ref, index) => {
-              const label = buildReferenceLabel(ref);
-              const targetExternalId =
-                ref.url != null ? extractAttackExternalIdFromUrl(ref.url) : null;
+          <button
+            type="button"
+            className="reference-toggle"
+            onClick={() => setSourcesExpanded((prev) => !prev)}
+            aria-expanded={sourcesExpanded}
+          >
+            <span className="reference-toggle-label">
+              Sources ({references.length})
+            </span>
+            <span className="reference-toggle-icon" aria-hidden="true">
+              {sourcesExpanded ? "▾" : "▸"}
+            </span>
+          </button>
 
-              if (targetExternalId) {
-                return (
-                  <button
-                    key={`${ref.source_name ?? "ref"}-${index}`}
-                    type="button"
-                    className="reference-link"
-                    onClick={() => openInternalTechniqueLink(targetExternalId)}
-                    title={ref.description ?? `Open ${targetExternalId} in this app`}
-                  >
-                    {label}
-                  </button>
-                );
-              }
+          {sourcesExpanded && (
+            <div className="reference-list">
+              {references.map((ref, index) => {
+                const label = buildReferenceLabel(ref);
+                const targetExternalId =
+                  ref.url != null
+                    ? extractAttackExternalIdFromUrl(ref.url)
+                    : null;
 
-              if (ref.url) {
+                if (targetExternalId) {
+                  return (
+                    <button
+                      key={`${ref.source_name ?? "ref"}-${index}`}
+                      type="button"
+                      className="reference-link"
+                      onClick={() => openInternalTechniqueLink(targetExternalId)}
+                      title={
+                        ref.description ?? `Open ${targetExternalId} in this app`
+                      }
+                    >
+                      {label}
+                    </button>
+                  );
+                }
+
+                if (ref.url) {
+                  return (
+                    <a
+                      key={`${ref.source_name ?? "ref"}-${index}`}
+                      className="reference-link"
+                      href={ref.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={ref.description ?? label}
+                    >
+                      {label}
+                    </a>
+                  );
+                }
+
                 return (
-                  <a
+                  <span
                     key={`${ref.source_name ?? "ref"}-${index}`}
-                    className="reference-link"
-                    href={ref.url}
-                    target="_blank"
-                    rel="noreferrer"
+                    className="reference-pill"
                     title={ref.description ?? label}
                   >
                     {label}
-                  </a>
+                  </span>
                 );
-              }
-
-              return (
-                <span
-                  key={`${ref.source_name ?? "ref"}-${index}`}
-                  className="reference-pill"
-                  title={ref.description ?? label}
-                >
-                  {label}
-                </span>
-              );
-            })}
-          </div>
+              })}
+            </div>
+          )}
         </section>
       )}
 
