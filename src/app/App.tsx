@@ -11,9 +11,16 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1>Attack Explorer</h1>
-          <p className="subtitle">
-            Explore MITRE ATT&CK across Enterprise, Mobile, and ICS datasets.
-          </p>
+<p className="subtitle">
+  Explore MITRE ATT&CK across Enterprise, Mobile, and ICS datasets ·{" "}
+  <a
+    href="https://github.com/mitre-attack/attack-stix-data"
+    target="_blank"
+    rel="noreferrer"
+  >
+    Source: MITRE ATT&CK STIX Data
+  </a>
+</p>
         </div>
         <DatasetTabs />
       </header>

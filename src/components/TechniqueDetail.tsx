@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import ReactMarkdown from "react-markdown";
 import { getExternalId } from "../lib/attack-parser";
 import { useAttackStore } from "../store/attack-store";
 import type { Relationship, StixObject } from "../types/attack";
@@ -109,6 +118,134 @@ function buildBreadcrumbs(
   });
 }
 
+function decorateCitationText(text: string): ReactNode[] {
+  const regex = /(\(Citation:\s*[^)]+\))/g;
+  const parts = text.split(regex);
+
+  return parts
+    .filter((part) => part.length > 0)
+    .map((part, index) => {
+      if (part.match(regex)) {
+        return (
+          <span key={`citation-${index}`} className="inline-citation">
+            {part}
+          </span>
+        );
+      }
+
+      return part;
+    });
+}
+
+function decorateNode(node: ReactNode): ReactNode {
+  if (typeof node === "string") {
+    return decorateCitationText(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child, index) => (
+      <span key={index}>{decorateNode(child)}</span>
+    ));
+  }
+
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    const originalChildren = node.props.children;
+
+    if (originalChildren == null) {
+      return node;
+    }
+
+    const decoratedChildren = Children.map(originalChildren, (child) =>
+      decorateNode(child),
+    );
+
+    return cloneElement(node, {
+      ...node.props,
+      children: decoratedChildren,
+    });
+  }
+
+  return node;
+}
+
+function extractAttackExternalIdFromUrl(href: string): string | null {
+  try {
+    const url = new URL(href);
+    const host = url.hostname.toLowerCase();
+
+    if (host !== "attack.mitre.org" && host !== "www.attack.mitre.org") {
+      return null;
+    }
+
+    const match = url.pathname.match(
+      /^\/techniques\/(T\d{4}(?:\/\d{3})?)\/?$/i,
+    );
+
+    if (!match) {
+      return null;
+    }
+
+    return match[1].replace("/", ".");
+  } catch {
+    return null;
+  }
+}
+
+function findTechniqueObjectIdByExternalId(
+  techniques: StixObject[],
+  externalId: string,
+): string | null {
+  const normalized = externalId.toUpperCase();
+
+  const found = techniques.find(
+    (technique) => getExternalId(technique)?.toUpperCase() === normalized,
+  );
+
+  return found?.id ?? null;
+}
+
+function MarkdownDescription({
+  content,
+  onOpenInternalTechniqueLink,
+}: {
+  content: string;
+  onOpenInternalTechniqueLink: (externalId: string) => void;
+}) {
+  return (
+    <ReactMarkdown
+      components={{
+        a: ({ href, children, ...props }) => {
+          const targetExternalId =
+            href != null ? extractAttackExternalIdFromUrl(href) : null;
+
+          if (targetExternalId) {
+            return (
+              <button
+                type="button"
+                className="inline-technique-link"
+                onClick={() => onOpenInternalTechniqueLink(targetExternalId)}
+                title={`Open ${targetExternalId} in this app`}
+              >
+                {children}
+              </button>
+            );
+          }
+
+          return (
+            <a {...props} href={href} target="_blank" rel="noreferrer">
+              {children}
+            </a>
+          );
+        },
+        p: ({ children }) => <p>{decorateNode(children)}</p>,
+        li: ({ children }) => <li>{decorateNode(children)}</li>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
 function RelatedGroupSection({
   title,
   groupedItems,
@@ -168,8 +305,6 @@ function RelatedGroupSection({
                     <div className="related-name">
                       {renderObjectLabel(obj, objectId)}
                     </div>
-
-                    <div className="related-id">{obj?.id ?? objectId}</div>
                   </button>
                 );
               })}
@@ -184,6 +319,10 @@ function RelatedGroupSection({
 export function TechniqueDetail() {
   const dataset = useAttackStore((s) => s.getCurrentDataset());
   const selectedTechnique = useAttackStore((s) => s.getSelectedTechnique());
+  const currentDataset = useAttackStore((s) => s.currentDataset);
+  const setSelectedTechniqueId = useAttackStore(
+    (s) => s.setSelectedTechniqueId,
+  );
 
   const [selectedObject, setSelectedObject] =
     useState<SelectedObjectState>(null);
@@ -211,8 +350,8 @@ export function TechniqueDetail() {
 
   const effectiveSelectedObjectId =
     selectedObject &&
-    selectedObject.rootTechniqueId === rootTechniqueId &&
-    dataset.objectsById[selectedObject.objectId]
+      selectedObject.rootTechniqueId === rootTechniqueId &&
+      dataset.objectsById[selectedObject.objectId]
       ? selectedObject.objectId
       : null;
 
@@ -298,6 +437,21 @@ export function TechniqueDetail() {
     });
   }
 
+  function openInternalTechniqueLink(externalId: string) {
+    if (!dataset) return;
+
+    const targetObjectId = findTechniqueObjectIdByExternalId(
+      dataset.techniques,
+      externalId,
+    );
+
+    if (!targetObjectId) return;
+
+    setSelectedTechniqueId(currentDataset, targetObjectId);
+    setSelectedObject(null);
+    setNavigationHistory([]);
+  }
+
   const breadcrumbs = buildBreadcrumbs(
     dataset.objectsById,
     selectedTechnique,
@@ -313,8 +467,8 @@ export function TechniqueDetail() {
   const tactics =
     detailObject.type === "attack-pattern"
       ? (detailObject.kill_chain_phases
-          ?.map((phase) => phase.phase_name)
-          .filter(Boolean) ?? [])
+        ?.map((phase) => phase.phase_name)
+        .filter(Boolean) ?? [])
       : [];
 
   const platforms = detailObject.x_mitre_platforms ?? [];
@@ -338,9 +492,6 @@ export function TechniqueDetail() {
                 onClick={() => jumpToBreadcrumb(item.id)}
               >
                 <span>{item.label}</span>
-                {item.typeLabel && (
-                  <span className="breadcrumb-type">{item.typeLabel}</span>
-                )}
               </button>
             )}
 
@@ -358,9 +509,12 @@ export function TechniqueDetail() {
           {externalId ?? detailObject.type ?? "Object"}
         </div>
         <h2>{detailObject.name ?? "(no name)"}</h2>
-        <p className="description">
-          {detailObject.description ?? "No description available."}
-        </p>
+        <div className="description">
+          <MarkdownDescription
+            content={detailObject.description ?? "No description available."}
+            onOpenInternalTechniqueLink={openInternalTechniqueLink}
+          />
+        </div>
       </div>
 
       {references.length > 0 && (
@@ -369,6 +523,22 @@ export function TechniqueDetail() {
           <div className="reference-list">
             {references.map((ref, index) => {
               const label = buildReferenceLabel(ref);
+              const targetExternalId =
+                ref.url != null ? extractAttackExternalIdFromUrl(ref.url) : null;
+
+              if (targetExternalId) {
+                return (
+                  <button
+                    key={`${ref.source_name ?? "ref"}-${index}`}
+                    type="button"
+                    className="reference-link"
+                    onClick={() => openInternalTechniqueLink(targetExternalId)}
+                    title={ref.description ?? `Open ${targetExternalId} in this app`}
+                  >
+                    {label}
+                  </button>
+                );
+              }
 
               if (ref.url) {
                 return (

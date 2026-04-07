@@ -116,13 +116,55 @@ input {
 .meta {
   font-size: 13px;
   color: #6b7280;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .list {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-right: 4px;
+}
+
+.tactic-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tactic-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tactic-section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #111827;
+}
+
+.tactic-section-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.tactic-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.technique-tree-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -134,22 +176,80 @@ input {
   border: 1px solid #e5e7eb;
   background: #fff;
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.list-item:hover {
+  border-color: #d1d5db;
+  background: #fcfcfd;
 }
 
 .list-item.active {
   border-color: #111827;
   background: #f9fafb;
+  box-shadow: inset 0 0 0 1px #111827;
 }
 
 .list-item-id {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: #9ca3af;
   margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .list-item-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.subtechnique-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.subtechnique-item {
+  position: relative;
+  background: #fafafa;
+  border-color: #eef2f7;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.subtechnique-item:hover {
+  background: #f8fafc;
+  border-color: #dbe3ec;
+}
+
+.subtechnique-item.active {
+  background: #f9fafb;
+  border-color: #111827;
+}
+
+.subtechnique-item::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 18px;
+  width: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.subtechnique-item .list-item-id {
+  margin-bottom: 3px;
+}
+
+.subtechnique-item .list-item-name {
   font-weight: 600;
 }
 
@@ -465,4 +565,136 @@ input {
   .list {
     overflow: visible;
   }
+
+  .subtechnique-list {
+    margin-left: 10px;
+    padding-left: 10px;
+  }
+}
+
+.tactic-section-header {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 8px;
+}
+
+.tactic-section-title {
+  color: #374151;
+}
+
+.tactic-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tactic-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tactic-toggle-icon {
+  font-size: 12px;
+  color: #6b7280;
+  width: 12px;
+  flex: 0 0 12px;
+}
+
+.description a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.description a:hover {
+  color: #1d4ed8;
+}
+
+.description p {
+  margin: 0 0 12px;
+}
+
+.description p:last-child {
+  margin-bottom: 0;
+}
+
+.description a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.description a:hover {
+  color: #1d4ed8;
+}
+
+.description p {
+  margin: 0 0 12px;
+}
+
+.description p:last-child {
+  margin-bottom: 0;
+}
+
+.inline-citation {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4b5563;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  vertical-align: baseline;
+}
+
+.description a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.description a:hover {
+  color: #1d4ed8;
+}
+
+.description p {
+  margin: 0 0 12px;
+}
+
+.description p:last-child {
+  margin-bottom: 0;
+}
+
+.inline-citation {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4b5563;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  vertical-align: baseline;
+}
+
+.inline-technique-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.inline-technique-link:hover {
+  color: #1d4ed8;
 }
