@@ -725,3 +725,13 @@ span.citation-pill.muted {
   gap: 8px;
   margin-top: 8px;
 }
+
+.subtle-link {
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.subtle-link:hover {
+  color: #6b7280;
+  text-decoration: underline;
+}
