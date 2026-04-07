@@ -1,73 +1,146 @@
-# React + TypeScript + Vite
+# Attack Explorer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive viewer for the MITRE ATT&CK framework.
 
-Currently, two official plugins are available:
+Attack Explorer is a React-based single-page application (SPA) designed to make MITRE ATT&CK easier to explore, navigate, and understand — without changing the original data.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🔍 Overview
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+MITRE ATT&CK is an incredibly valuable knowledge base for understanding adversary behavior.  
+However, its comprehensiveness can make it difficult to browse and explore.
 
-## Expanding the ESLint configuration
+Attack Explorer focuses on improving usability and discoverability by providing:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Structured navigation by tactic and technique
+- Drill-down exploration of relationships (techniques, malware, groups, etc.)
+- Clean, minimal UI optimized for fast browsing
+- Direct use of official STIX datasets (no data modification)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 🌐 Live Demo
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+https://attack.notegridx.dev
+
+> ⚠️ Initial load downloads ~50MB of data  
+> Wi-Fi connection is recommended  
+> PC / tablet is recommended due to the volume of information
+
+---
+
+## 📦 Data Source
+
+This project uses the official MITRE ATT&CK STIX dataset:
+
+- Enterprise ATT&CK  
+- Mobile ATT&CK  
+- ICS ATT&CK  
+
+Data is not altered — the application focuses purely on improving the browsing experience.
+
+---
+
+## 🚀 Features
+
+- Explore ATT&CK datasets (Enterprise / Mobile / ICS)
+- View techniques and sub-techniques in a hierarchical structure
+- Navigate relationships (malware, intrusion sets, tools, mitigations)
+- Inline citation linking for references
+- Breadcrumb-based navigation for deep exploration
+- Responsive UI (mobile supported, but desktop recommended)
+
+---
+
+## 🛠 Tech Stack
+
+- React
+- TypeScript
+- Vite
+- Static hosting (Cloudflare Pages)
+- Data hosted on Cloudflare R2
+
+---
+
+## 🏗 Local Development
+
+```bash
+git clone https://github.com/notegridx/attack-explorer
+cd attack-explorer
+
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Then open:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+http://localhost:5173
+```
+
+---
+
+## 📁 Project Structure (simplified)
+
+```
+src/
+  app/
+  components/
+  store/
+  lib/
+```
+
+---
+
+## 🎯 Design Philosophy
+
+This project does **not** attempt to replace MITRE ATT&CK.
+
+Instead, it aims to:
+
+> Shift ATT&CK from something you “look up”  
+> to something you can “interactively explore”
+
+Key principles:
+
+- Preserve original data fidelity
+- Improve UX without abstraction loss
+- Enable intuitive exploration of relationships
+
+---
+
+## ⚠️ Notes
+
+- This is a client-side SPA  
+- Large dataset (~50MB) is loaded on initial access  
+- Performance depends on browser and device
+
+---
+
+## 📄 License
+
+MIT License
+
+---
+
+## 🙌 Acknowledgements
+
+- MITRE ATT&CK
+- Official STIX data repository
+
+---
+
+## 👤 Author
+
+notegridx
+
+---
+
+## 📌 Future Improvements (optional)
+
+- Incremental data loading
+- Advanced filtering / search
+- Graph-based relationship visualization
+- Bookmarking / session persistence
+；；；；；；；；；；；；；；；；；；；；p
