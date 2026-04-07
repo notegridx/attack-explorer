@@ -1,140 +1,24 @@
-# =========================
 # Logs
-# =========================
 logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
-# Diagnostic reports
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage
-coverage
-*.lcov
-.nyc_output
-
-# =========================
-# Node / Build
-# =========================
-node_modules/
+node_modules
 dist
-build/
-jspm_packages/
-web_modules/
+dist-ssr
+*.local
 
-# =========================
-# Cache / Tooling
-# =========================
-.npm
-.eslintcache
-.stylelintcache
-.cache
-.parcel-cache
-.temp
-.svelte-kit/
-.docusaurus
-.fusebox/
-.serverless/
-.firebase/
-
-# =========================
-# TypeScript
-# =========================
-*.tsbuildinfo
-
-# =========================
-# Env files
-# =========================
-.env
-.env.*
-!.env.example
-
-# =========================
-# Package artifacts
-# =========================
-*.tgz
-.yarn-integrity
-
-# =========================
-# Yarn v3
-# =========================
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-
-# =========================
-# Framework outputs
-# =========================
-.next
-out
-.nuxt
-.vuepress/dist
-**/.vitepress/dist
-**/.vitepress/cache
-
-# =========================
-# Vite
-# =========================
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-
-# =========================
-# OS files (重要)
-# =========================
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-
-# Linux
-*~
-
-# =========================
-# VS Code (重要)
-# =========================
-
+# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
-
-# テスト用VSCode
-.vscode-test
-
-# =========================
-# IDE (他)
-# =========================
-.idea/
-*.iml
-
-# =========================
-# Misc
-# =========================
-
-# Node REPL
-.node_repl_history
-
-# DynamoDB Local
-.dynamodb/
-
-# TernJS
-.tern-port
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
