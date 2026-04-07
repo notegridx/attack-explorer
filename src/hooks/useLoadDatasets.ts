@@ -3,7 +3,7 @@ import { parseAttackBundle } from "../lib/attack-parser";
 import { useAttackStore } from "../store/attack-store";
 import type { DatasetKey } from "../types/attack";
 
-const R2_BASE_URL = "https://pub-128c7382d87542bcb8b91426b05e300f.r2.dev";
+const R2_BASE_URL = "https://static.notegridx.dev";
 
 const DATASET_FILES: Record<DatasetKey, string> = {
   enterprise: `${R2_BASE_URL}/enterprise-attack.json`,
