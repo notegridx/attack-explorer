@@ -32,7 +32,6 @@ function buildGroupedRelationships(
 ): {
   sections: DirectionSection[];
   visibleCount: number;
-  hiddenCount: number;
 } {
   const outgoing = dataset.relationshipsBySource[centerObjectId] ?? [];
   const incoming = dataset.relationshipsByTarget[centerObjectId] ?? [];
@@ -72,43 +71,31 @@ function buildGroupedRelationships(
   collectByType(outgoing, "outgoing");
   collectByType(incoming, "incoming");
 
-  const MAX_TYPES_PER_DIRECTION = 4;
-  const MAX_OBJECTS_PER_TYPE = 4;
-
-  let hiddenCount = 0;
   let visibleCount = 0;
 
   const buildSection = (
     direction: "outgoing" | "incoming",
     byType: Map<string, Map<string, Relationship[]>>,
   ): DirectionSection => {
-    const visibleTypes = Array.from(byType.entries()).slice(
-      0,
-      MAX_TYPES_PER_DIRECTION,
+    const groups = Array.from(byType.entries()).map(
+      ([relationshipType, objectMap]) => {
+        const items: RelatedObjectEntry[] = Array.from(objectMap.entries()).map(
+          ([objectId, relationships]) => ({
+            objectId,
+            relationshipType,
+            direction,
+            relationships,
+          }),
+        );
+
+        visibleCount += items.length;
+
+        return {
+          relationshipType,
+          items,
+        };
+      },
     );
-
-    hiddenCount += Math.max(byType.size - visibleTypes.length, 0);
-
-    const groups = visibleTypes.map(([relationshipType, objectMap]) => {
-      const allEntries: RelatedObjectEntry[] = Array.from(
-        objectMap.entries(),
-      ).map(([objectId, relationships]) => ({
-        objectId,
-        relationshipType,
-        direction,
-        relationships,
-      }));
-
-      hiddenCount += Math.max(allEntries.length - MAX_OBJECTS_PER_TYPE, 0);
-
-      const items = allEntries.slice(0, MAX_OBJECTS_PER_TYPE);
-      visibleCount += items.length;
-
-      return {
-        relationshipType,
-        items,
-      };
-    });
 
     return {
       direction,
@@ -121,7 +108,7 @@ function buildGroupedRelationships(
     buildSection("outgoing", outgoingByType),
   ].filter((section) => section.groups.length > 0);
 
-  return { sections, visibleCount, hiddenCount };
+  return { sections, visibleCount };
 }
 
 function getObjectTypeClassName(obj?: StixObject) {
@@ -222,7 +209,7 @@ export function RelationshipGraph({
 }: RelationshipGraphProps) {
   const centerObject = dataset.objectsById[centerObjectId];
 
-  const { sections, visibleCount, hiddenCount } = useMemo(
+  const { sections, visibleCount } = useMemo(
     () => buildGroupedRelationships(dataset, centerObjectId),
     [dataset, centerObjectId],
   );
@@ -244,13 +231,6 @@ export function RelationshipGraph({
         <h3>Relationship tree</h3>
         <span className="related-section-count">{visibleCount}</span>
       </div>
-
-      {hiddenCount > 0 && (
-        <div className="attack-graph-note">
-          Showing a structured subset of related objects in the tree.{" "}
-          {hiddenCount} more are available in the relationship lists below.
-        </div>
-      )}
 
       <div className="relationship-tree">
         {incomingSection && (
