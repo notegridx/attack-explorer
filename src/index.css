@@ -364,6 +364,8 @@ input {
 .description {
   color: #374151;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .description a {
@@ -601,9 +603,41 @@ input {
 
 .reference-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 8px;
+}
+
+.reference-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reference-name {
+  display: inline-flex;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.reference-name:hover {
+  color: #1d4ed8;
+}
+
+.reference-description {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4b5563;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .reference-link,
@@ -707,7 +741,6 @@ button.citation-pill,
 span.citation-pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   vertical-align: middle;
   margin: 0 4px;
   padding: 2px 8px;
@@ -718,7 +751,10 @@ span.citation-pill {
   color: #3730a3;
   border: 1px solid #c7d2fe;
   text-decoration: none;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 a.citation-pill,
@@ -783,6 +819,48 @@ span.citation-pill.muted {
 
 .reference-toggle-icon {
   font-size: 12px;
+}
+
+.meta-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meta-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .subtle-link {
@@ -1297,4 +1375,17 @@ span.citation-pill.muted {
   .consent-primary-button {
     width: 100%;
   }
+}
+
+.reference-name-button {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.reference-name-plain {
+  color: #111827;
+  text-decoration: none;
 }

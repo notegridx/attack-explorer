@@ -601,8 +601,8 @@ export function TechniqueDetail() {
   const tactics =
     detailObject.type === "attack-pattern"
       ? (detailObject.kill_chain_phases
-          ?.map((phase) => phase.phase_name)
-          .filter(Boolean) ?? [])
+        ?.map((phase) => phase.phase_name)
+        .filter(Boolean) ?? [])
       : [];
 
   const platforms = detailObject.x_mitre_platforms ?? [];
@@ -673,50 +673,7 @@ export function TechniqueDetail() {
               {references.map((ref, index) => {
                 const label = buildReferenceLabel(ref);
                 const targetExternalId =
-                  ref.url != null
-                    ? extractAttackExternalIdFromUrl(ref.url)
-                    : null;
-
-                if (targetExternalId) {
-                  return (
-                    <button
-                      key={`${label}-${index}`}
-                      type="button"
-                      className="reference-item reference-item-button"
-                      onClick={() =>
-                        openInternalTechniqueLink(targetExternalId)
-                      }
-                      title={ref.description ?? label}
-                    >
-                      <span className="reference-name">{label}</span>
-                      {ref.description && (
-                        <span className="reference-description">
-                          {ref.description}
-                        </span>
-                      )}
-                    </button>
-                  );
-                }
-
-                if (ref.url) {
-                  return (
-                    <a
-                      key={`${label}-${index}`}
-                      className="reference-item"
-                      href={ref.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={ref.description ?? label}
-                    >
-                      <span className="reference-name">{label}</span>
-                      {ref.description && (
-                        <span className="reference-description">
-                          {ref.description}
-                        </span>
-                      )}
-                    </a>
-                  );
-                }
+                  ref.url != null ? extractAttackExternalIdFromUrl(ref.url) : null;
 
                 return (
                   <div
@@ -724,11 +681,31 @@ export function TechniqueDetail() {
                     className="reference-item"
                     title={ref.description ?? label}
                   >
-                    <span className="reference-name">{label}</span>
-                    {ref.description && (
-                      <span className="reference-description">
-                        {ref.description}
+                    {targetExternalId ? (
+                      <button
+                        type="button"
+                        className="reference-name reference-name-button"
+                        onClick={() => openInternalTechniqueLink(targetExternalId)}
+                      >
+                        {label}
+                      </button>
+                    ) : ref.url ? (
+                      <a
+                        className="reference-name"
+                        href={ref.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {label}
+                      </a>
+                    ) : (
+                      <span className="reference-name reference-name-plain">
+                        {label}
                       </span>
+                    )}
+
+                    {ref.description && (
+                      <div className="reference-description">{ref.description}</div>
                     )}
                   </div>
                 );
