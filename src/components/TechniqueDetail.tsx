@@ -357,6 +357,37 @@ function MarkdownDescription({
   );
 }
 
+// Build cleaned description for card preview (remove noise like links, duplicated names, etc.)
+function buildCardDescription(obj?: StixObject) {
+  const raw = obj?.description?.trim();
+  if (!raw) return "";
+
+  let text = raw;
+
+  // Convert markdown links [label](url) → label
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1");
+
+  // Remove standalone URLs
+  text = text.replace(/https?:\/\/\S+/g, "");
+
+  // Remove leading [Name] pattern
+  text = text.replace(/^\s*\[[^\]]+\]\s*/, "");
+
+  // Remove duplicated object name at the beginning
+  if (obj?.name) {
+    const escapedName = obj.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text.replace(
+      new RegExp(`^\\s*${escapedName}\\s*[:：-]?\\s*`, "i"),
+      "",
+    );
+  }
+
+  // Normalize whitespace
+  text = text.replace(/\s+/g, " ").trim();
+
+  return text;
+}
+
 function RelatedGroupSection({
   title,
   groupedItems,
@@ -395,6 +426,9 @@ function RelatedGroupSection({
                 const active = activeObjectId === objectId;
                 const externalId = renderObjectExternalId(obj);
 
+                // Build cleaned description for card
+                const cardDescription = buildCardDescription(obj);
+
                 return (
                   <button
                     key={rel.id}
@@ -416,6 +450,12 @@ function RelatedGroupSection({
                     <div className="related-name">
                       {renderObjectLabel(obj, objectId)}
                     </div>
+
+                    {cardDescription && (
+                      <div className="related-description">
+                        {cardDescription.slice(0, 120)}...
+                      </div>
+                    )}
                   </button>
                 );
               })}
