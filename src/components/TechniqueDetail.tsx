@@ -25,11 +25,6 @@ type NavigationEntry = {
   objectId: string;
 };
 
-type SelectedObjectState = {
-  rootTechniqueId: string;
-  objectId: string;
-} | null;
-
 type BreadcrumbItem = {
   id: string;
   label: string;
@@ -436,12 +431,16 @@ export function TechniqueDetail() {
   const dataset = useAttackStore((s) => s.getCurrentDataset());
   const selectedTechnique = useAttackStore((s) => s.getSelectedTechnique());
   const currentDataset = useAttackStore((s) => s.currentDataset);
+  const currentDetailObjectIdFromStore = useAttackStore(
+    (s) => s.currentDetailObjectId[s.currentDataset],
+  );
   const setSelectedTechniqueId = useAttackStore(
     (s) => s.setSelectedTechniqueId,
   );
+  const setCurrentDetailObjectId = useAttackStore(
+    (s) => s.setCurrentDetailObjectId,
+  );
 
-  const [selectedObject, setSelectedObject] =
-    useState<SelectedObjectState>(null);
   const [navigationHistory, setNavigationHistory] = useState<NavigationEntry[]>(
     [],
   );
@@ -451,11 +450,47 @@ export function TechniqueDetail() {
 
   const panelRef = useRef<HTMLDivElement | null>(null);
 
+  const rootTechniqueId = selectedTechnique?.id ?? null;
+
+  const effectiveHistory =
+    dataset && rootTechniqueId
+      ? navigationHistory.filter(
+          (entry) =>
+            entry.rootTechniqueId === rootTechniqueId &&
+            Boolean(
+              dataset.objectsById[entry.objectId] ||
+              entry.objectId === rootTechniqueId,
+            ),
+        )
+      : [];
+
+  const detailObject =
+    dataset && selectedTechnique
+      ? currentDetailObjectIdFromStore &&
+        dataset.objectsById[currentDetailObjectIdFromStore]
+        ? dataset.objectsById[currentDetailObjectIdFromStore]
+        : selectedTechnique
+      : undefined;
+
+  const detailObjectId = detailObject?.id ?? null;
+
   useEffect(() => {
     if (panelRef.current) {
       panelRef.current.scrollTop = 0;
     }
-  }, [selectedTechnique?.id, selectedObject?.objectId]);
+  }, [selectedTechnique?.id, detailObjectId]);
+
+  useEffect(() => {
+    if (!currentDataset || !detailObjectId) return;
+    if (currentDetailObjectIdFromStore === detailObjectId) return;
+
+    setCurrentDetailObjectId(currentDataset, detailObjectId);
+  }, [
+    currentDataset,
+    currentDetailObjectIdFromStore,
+    detailObjectId,
+    setCurrentDetailObjectId,
+  ]);
 
   if (!dataset) {
     return <div className="panel">Loading...</div>;
@@ -465,34 +500,10 @@ export function TechniqueDetail() {
     return <div className="panel">No technique selected.</div>;
   }
 
-  const rootTechniqueId = selectedTechnique.id;
-
-  const effectiveSelectedObjectId =
-    selectedObject &&
-    selectedObject.rootTechniqueId === rootTechniqueId &&
-    dataset.objectsById[selectedObject.objectId]
-      ? selectedObject.objectId
-      : null;
-
-  const effectiveHistory = navigationHistory.filter(
-    (entry) =>
-      entry.rootTechniqueId === rootTechniqueId &&
-      Boolean(
-        dataset.objectsById[entry.objectId] ||
-        entry.objectId === rootTechniqueId,
-      ),
-  );
-
-  const detailObject =
-    effectiveSelectedObjectId != null
-      ? dataset.objectsById[effectiveSelectedObjectId]
-      : selectedTechnique;
-
-  if (!detailObject) {
+  if (!detailObject || !rootTechniqueId || !detailObjectId) {
     return <div className="panel">No object selected.</div>;
   }
 
-  const detailObjectId = detailObject.id;
   const detailKey = `${selectedTechnique.id}:${detailObjectId}`;
   const sourcesExpanded = sourcesExpandedFor === detailKey;
 
@@ -513,6 +524,7 @@ export function TechniqueDetail() {
   }));
 
   function openObject(objectId: string) {
+    if (!detailObjectId || !rootTechniqueId) return;
     if (objectId === detailObjectId) return;
 
     setNavigationHistory((prev) => [
@@ -523,18 +535,18 @@ export function TechniqueDetail() {
       },
     ]);
 
-    setSelectedObject({
-      rootTechniqueId,
-      objectId,
-    });
+    setCurrentDetailObjectId(currentDataset, objectId);
   }
 
   function goRoot() {
-    setSelectedObject(null);
+    if (!rootTechniqueId) return;
     setNavigationHistory([]);
+    setCurrentDetailObjectId(currentDataset, rootTechniqueId);
   }
 
   function jumpToBreadcrumb(objectId: string) {
+    if (!rootTechniqueId) return;
+
     if (objectId === rootTechniqueId) {
       goRoot();
       return;
@@ -545,33 +557,25 @@ export function TechniqueDetail() {
     );
 
     if (index === -1) {
-      setSelectedObject({
-        rootTechniqueId,
-        objectId,
-      });
+      setCurrentDetailObjectId(currentDataset, objectId);
       return;
     }
 
     setNavigationHistory(effectiveHistory.slice(0, index));
-    setSelectedObject({
-      rootTechniqueId,
-      objectId,
-    });
+    setCurrentDetailObjectId(currentDataset, objectId);
   }
-
-  const ds = dataset;
 
   function openInternalTechniqueLink(externalId: string) {
     const targetObjectId = findTechniqueObjectIdByExternalId(
-      ds.techniques,
+      dataset!.techniques,
       externalId,
     );
 
     if (!targetObjectId) return;
 
     setSelectedTechniqueId(currentDataset, targetObjectId);
-    setSelectedObject(null);
     setNavigationHistory([]);
+    setCurrentDetailObjectId(currentDataset, targetObjectId);
   }
 
   function toggleSourcesExpanded() {

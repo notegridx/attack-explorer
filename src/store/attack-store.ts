@@ -6,6 +6,7 @@ type AttackStore = {
   datasets: Partial<Record<DatasetKey, ParsedDataset>>;
   datasetLoadState: Record<DatasetKey, "idle" | "loading" | "loaded" | "error">;
   selectedTechniqueId: Partial<Record<DatasetKey, string | null>>;
+  currentDetailObjectId: Partial<Record<DatasetKey, string | null>>;
   searchText: string;
 
   setCurrentDataset: (key: DatasetKey) => void;
@@ -15,10 +16,12 @@ type AttackStore = {
     state: "idle" | "loading" | "loaded" | "error",
   ) => void;
   setSelectedTechniqueId: (dataset: DatasetKey, id: string | null) => void;
+  setCurrentDetailObjectId: (dataset: DatasetKey, id: string | null) => void;
   setSearchText: (value: string) => void;
 
   getCurrentDataset: () => ParsedDataset | undefined;
   getSelectedTechnique: () => StixObject | undefined;
+  getCurrentDetailObject: () => StixObject | undefined;
 };
 
 export const useAttackStore = create<AttackStore>((set, get) => ({
@@ -30,6 +33,7 @@ export const useAttackStore = create<AttackStore>((set, get) => ({
     ics: "idle",
   },
   selectedTechniqueId: {},
+  currentDetailObjectId: {},
   searchText: "",
 
   setCurrentDataset: (key) => set({ currentDataset: key }),
@@ -52,6 +56,13 @@ export const useAttackStore = create<AttackStore>((set, get) => ({
           ...state.selectedTechniqueId,
           [key]: alreadySelected ?? firstTechniqueId,
         },
+        currentDetailObjectId: {
+          ...state.currentDetailObjectId,
+          [key]:
+            state.currentDetailObjectId[key] ??
+            alreadySelected ??
+            firstTechniqueId,
+        },
       };
     }),
 
@@ -69,6 +80,18 @@ export const useAttackStore = create<AttackStore>((set, get) => ({
         ...state.selectedTechniqueId,
         [dataset]: id,
       },
+      currentDetailObjectId: {
+        ...state.currentDetailObjectId,
+        [dataset]: id,
+      },
+    })),
+
+  setCurrentDetailObjectId: (dataset, id) =>
+    set((state) => ({
+      currentDetailObjectId: {
+        ...state.currentDetailObjectId,
+        [dataset]: id,
+      },
     })),
 
   setSearchText: (value) => set({ searchText: value }),
@@ -84,5 +107,13 @@ export const useAttackStore = create<AttackStore>((set, get) => ({
     const selectedId = state.selectedTechniqueId[state.currentDataset];
     if (!dataset || !selectedId) return undefined;
     return dataset.objectsById[selectedId];
+  },
+
+  getCurrentDetailObject: () => {
+    const state = get();
+    const dataset = state.datasets[state.currentDataset];
+    const detailId = state.currentDetailObjectId[state.currentDataset];
+    if (!dataset || !detailId) return undefined;
+    return dataset.objectsById[detailId];
   },
 }));

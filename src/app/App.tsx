@@ -1,5 +1,6 @@
 import { DatasetTabs } from "../components/DatasetTabs";
 import { TechniqueDetail } from "../components/TechniqueDetail";
+import { TechniqueGraphPanel } from "../components/TechniqueGraphPanel";
 import { TechniqueList } from "../components/TechniqueList";
 import { useLoadDatasets } from "../hooks/useLoadDatasets";
 
@@ -34,9 +35,10 @@ export default function App() {
         <DatasetTabs />
       </header>
 
-      <main className="main-grid">
+      <main className="main-grid three-pane-layout">
         <TechniqueList />
         <TechniqueDetail />
+        <TechniqueGraphPanel />
       </main>
     </div>
   );
