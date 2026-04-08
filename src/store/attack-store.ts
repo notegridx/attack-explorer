@@ -51,7 +51,11 @@ export const useAttackStore = create<AttackStore>((set, get) => ({
   },
   selectedTechniqueId: {},
   currentDetailObjectId: {},
-  navigationHistory: {},
+  navigationHistory: {
+    enterprise: [],
+    mobile: [],
+    ics: [],
+  },
   searchText: "",
 
   setCurrentDataset: (key) => set({ currentDataset: key }),

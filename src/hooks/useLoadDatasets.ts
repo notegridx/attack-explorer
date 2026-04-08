@@ -11,12 +11,16 @@ const DATASET_FILES: Record<DatasetKey, string> = {
   ics: `${R2_BASE_URL}/ics-attack.json`,
 };
 
-export function useLoadDatasets() {
+export function useLoadDatasets(enabled = true) {
   const currentDataset = useAttackStore((s) => s.currentDataset);
   const setDataset = useAttackStore((s) => s.setDataset);
   const setDatasetLoadState = useAttackStore((s) => s.setDatasetLoadState);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     async function loadDataset(key: DatasetKey) {
       const state = useAttackStore.getState();
 
@@ -29,7 +33,7 @@ export function useLoadDatasets() {
 
         const response = await fetch(DATASET_FILES[key]);
         if (!response.ok) {
-          throw new Error(`Failed to load ${key} dataset: ${response.status}`);
+          throw new Error(`Failed to fetch ${key} dataset: ${response.status}`);
         }
 
         const bundle = await response.json();
@@ -41,6 +45,6 @@ export function useLoadDatasets() {
       }
     }
 
-    void loadDataset(currentDataset);
-  }, [currentDataset, setDataset, setDatasetLoadState]);
+    loadDataset(currentDataset);
+  }, [currentDataset, enabled, setDataset, setDatasetLoadState]);
 }

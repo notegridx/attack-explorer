@@ -459,7 +459,10 @@ export function TechniqueDetail() {
   const selectedTechnique = useAttackStore((s) => s.getSelectedTechnique());
   const currentDataset = useAttackStore((s) => s.currentDataset);
   const navigationHistory = useAttackStore(
-    (s) => s.navigationHistory[s.currentDataset] ?? [],
+    (s) => s.navigationHistory[s.currentDataset],
+  );
+  const currentDetailObjectId = useAttackStore(
+    (s) => s.currentDetailObjectId[s.currentDataset],
   );
   const setSelectedTechniqueId = useAttackStore(
     (s) => s.setSelectedTechniqueId,
@@ -479,38 +482,11 @@ export function TechniqueDetail() {
 
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  const rootTechniqueId = selectedTechnique?.id ?? null;
-
-  const effectiveHistory =
-    dataset && rootTechniqueId
-      ? navigationHistory.filter(
-          (entry) =>
-            entry.rootTechniqueId === rootTechniqueId &&
-            Boolean(
-              dataset.objectsById[entry.objectId] ||
-              entry.objectId === rootTechniqueId,
-            ),
-        )
-      : [];
-
-  const detailObject =
-    dataset && selectedTechnique
-      ? (() => {
-          const detailId =
-            useAttackStore.getState().currentDetailObjectId[currentDataset];
-          return detailId && dataset.objectsById[detailId]
-            ? dataset.objectsById[detailId]
-            : selectedTechnique;
-        })()
-      : undefined;
-
-  const detailObjectId = detailObject?.id ?? null;
-
   useEffect(() => {
     if (panelRef.current) {
       panelRef.current.scrollTop = 0;
     }
-  }, [selectedTechnique?.id, detailObjectId]);
+  }, [selectedTechnique?.id, currentDetailObjectId]);
 
   if (!dataset) {
     return <div className="panel">Loading...</div>;
@@ -520,7 +496,27 @@ export function TechniqueDetail() {
     return <div className="panel">No technique selected.</div>;
   }
 
-  if (!detailObject || !rootTechniqueId || !detailObjectId) {
+  const safeDataset = dataset;
+  const history = navigationHistory ?? [];
+  const rootTechniqueId = selectedTechnique.id;
+
+  const effectiveHistory = history.filter(
+    (entry) =>
+      entry.rootTechniqueId === rootTechniqueId &&
+      Boolean(
+        safeDataset.objectsById[entry.objectId] ||
+        entry.objectId === rootTechniqueId,
+      ),
+  );
+
+  const detailObject =
+    currentDetailObjectId && safeDataset.objectsById[currentDetailObjectId]
+      ? safeDataset.objectsById[currentDetailObjectId]
+      : selectedTechnique;
+
+  const detailObjectId = detailObject?.id ?? null;
+
+  if (!detailObjectId) {
     return <div className="panel">No object selected.</div>;
   }
 
@@ -528,36 +524,31 @@ export function TechniqueDetail() {
   const sourcesExpanded = sourcesExpandedFor === detailKey;
 
   const outgoingItems: RelatedItem[] = (
-    dataset.relationshipsBySource[detailObjectId] ?? []
+    safeDataset.relationshipsBySource[detailObjectId] ?? []
   ).map((rel) => ({
     rel,
-    obj: dataset.objectsById[rel.target_ref],
+    obj: safeDataset.objectsById[rel.target_ref],
     objectId: rel.target_ref,
   }));
 
   const incomingItems: RelatedItem[] = (
-    dataset.relationshipsByTarget[detailObjectId] ?? []
+    safeDataset.relationshipsByTarget[detailObjectId] ?? []
   ).map((rel) => ({
     rel,
-    obj: dataset.objectsById[rel.source_ref],
+    obj: safeDataset.objectsById[rel.source_ref],
     objectId: rel.source_ref,
   }));
 
   function openObject(objectId: string) {
-    if (!detailObjectId || !rootTechniqueId) return;
-
     openDetailObject(currentDataset, rootTechniqueId, detailObjectId, objectId);
   }
 
   function goRoot() {
-    if (!rootTechniqueId) return;
     resetNavigationHistory(currentDataset);
     setCurrentDetailObjectId(currentDataset, rootTechniqueId);
   }
 
   function jumpToBreadcrumb(objectId: string) {
-    if (!rootTechniqueId) return;
-
     if (objectId === rootTechniqueId) {
       goRoot();
       return;
@@ -578,7 +569,7 @@ export function TechniqueDetail() {
 
   function openInternalTechniqueLink(externalId: string) {
     const targetObjectId = findTechniqueObjectIdByExternalId(
-      dataset.techniques,
+      safeDataset.techniques,
       externalId,
     );
 
@@ -594,7 +585,7 @@ export function TechniqueDetail() {
   }
 
   const breadcrumbs = buildBreadcrumbs(
-    dataset.objectsById,
+    safeDataset.objectsById,
     selectedTechnique,
     detailObject,
     effectiveHistory,
