@@ -11,17 +11,12 @@ import {
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import { getExternalId } from "../lib/attack-parser";
-import { useAttackStore } from "../store/attack-store";
+import { useAttackStore, type NavigationEntry } from "../store/attack-store";
 import type { Relationship, StixObject } from "../types/attack";
 
 type RelatedItem = {
   rel: Relationship;
   obj?: StixObject;
-  objectId: string;
-};
-
-type NavigationEntry = {
-  rootTechniqueId: string;
   objectId: string;
 };
 
@@ -357,32 +352,24 @@ function MarkdownDescription({
   );
 }
 
-// Build cleaned description for card preview (remove noise like links, duplicated names, etc.)
 function buildCardDescription(obj?: StixObject) {
   const raw = obj?.description?.trim();
   if (!raw) return "";
 
   let text = raw;
 
-  // Convert markdown links [label](url) → label
   text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1");
-
-  // Remove standalone URLs
   text = text.replace(/https?:\/\/\S+/g, "");
-
-  // Remove leading [Name] pattern
   text = text.replace(/^\s*\[[^\]]+\]\s*/, "");
 
-  // Remove duplicated object name at the beginning
   if (obj?.name) {
     const escapedName = obj.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     text = text.replace(
-      new RegExp(`^\\s*${escapedName}\\s*[:：-]?\\s*`, "i"),
+      new RegExp(`^\\s*${escapedName}\\s*[:：]?\\s*`, "i"),
       "",
     );
   }
 
-  // Normalize whitespace
   text = text.replace(/\s+/g, " ").trim();
 
   return text;
@@ -425,8 +412,6 @@ function RelatedGroupSection({
               {items.map(({ rel, obj, objectId }) => {
                 const active = activeObjectId === objectId;
                 const externalId = renderObjectExternalId(obj);
-
-                // Build cleaned description for card
                 const cardDescription = buildCardDescription(obj);
 
                 return (
@@ -453,7 +438,9 @@ function RelatedGroupSection({
 
                     {cardDescription && (
                       <div className="related-description">
-                        {cardDescription.slice(0, 120)}...
+                        {cardDescription.length > 120
+                          ? `${cardDescription.slice(0, 120)}...`
+                          : cardDescription}
                       </div>
                     )}
                   </button>
@@ -471,8 +458,8 @@ export function TechniqueDetail() {
   const dataset = useAttackStore((s) => s.getCurrentDataset());
   const selectedTechnique = useAttackStore((s) => s.getSelectedTechnique());
   const currentDataset = useAttackStore((s) => s.currentDataset);
-  const currentDetailObjectIdFromStore = useAttackStore(
-    (s) => s.currentDetailObjectId[s.currentDataset],
+  const navigationHistory = useAttackStore(
+    (s) => s.navigationHistory[s.currentDataset] ?? [],
   );
   const setSelectedTechniqueId = useAttackStore(
     (s) => s.setSelectedTechniqueId,
@@ -480,10 +467,12 @@ export function TechniqueDetail() {
   const setCurrentDetailObjectId = useAttackStore(
     (s) => s.setCurrentDetailObjectId,
   );
-
-  const [navigationHistory, setNavigationHistory] = useState<NavigationEntry[]>(
-    [],
+  const openDetailObject = useAttackStore((s) => s.openDetailObject);
+  const resetNavigationHistory = useAttackStore(
+    (s) => s.resetNavigationHistory,
   );
+  const setNavigationHistory = useAttackStore((s) => s.setNavigationHistory);
+
   const [sourcesExpandedFor, setSourcesExpandedFor] = useState<string | null>(
     null,
   );
@@ -506,10 +495,13 @@ export function TechniqueDetail() {
 
   const detailObject =
     dataset && selectedTechnique
-      ? currentDetailObjectIdFromStore &&
-        dataset.objectsById[currentDetailObjectIdFromStore]
-        ? dataset.objectsById[currentDetailObjectIdFromStore]
-        : selectedTechnique
+      ? (() => {
+          const detailId =
+            useAttackStore.getState().currentDetailObjectId[currentDataset];
+          return detailId && dataset.objectsById[detailId]
+            ? dataset.objectsById[detailId]
+            : selectedTechnique;
+        })()
       : undefined;
 
   const detailObjectId = detailObject?.id ?? null;
@@ -519,18 +511,6 @@ export function TechniqueDetail() {
       panelRef.current.scrollTop = 0;
     }
   }, [selectedTechnique?.id, detailObjectId]);
-
-  useEffect(() => {
-    if (!currentDataset || !detailObjectId) return;
-    if (currentDetailObjectIdFromStore === detailObjectId) return;
-
-    setCurrentDetailObjectId(currentDataset, detailObjectId);
-  }, [
-    currentDataset,
-    currentDetailObjectIdFromStore,
-    detailObjectId,
-    setCurrentDetailObjectId,
-  ]);
 
   if (!dataset) {
     return <div className="panel">Loading...</div>;
@@ -565,22 +545,13 @@ export function TechniqueDetail() {
 
   function openObject(objectId: string) {
     if (!detailObjectId || !rootTechniqueId) return;
-    if (objectId === detailObjectId) return;
 
-    setNavigationHistory((prev) => [
-      ...prev.filter((entry) => entry.rootTechniqueId === rootTechniqueId),
-      {
-        rootTechniqueId,
-        objectId: detailObjectId,
-      },
-    ]);
-
-    setCurrentDetailObjectId(currentDataset, objectId);
+    openDetailObject(currentDataset, rootTechniqueId, detailObjectId, objectId);
   }
 
   function goRoot() {
     if (!rootTechniqueId) return;
-    setNavigationHistory([]);
+    resetNavigationHistory(currentDataset);
     setCurrentDetailObjectId(currentDataset, rootTechniqueId);
   }
 
@@ -601,20 +572,20 @@ export function TechniqueDetail() {
       return;
     }
 
-    setNavigationHistory(effectiveHistory.slice(0, index));
+    setNavigationHistory(currentDataset, effectiveHistory.slice(0, index));
     setCurrentDetailObjectId(currentDataset, objectId);
   }
 
   function openInternalTechniqueLink(externalId: string) {
     const targetObjectId = findTechniqueObjectIdByExternalId(
-      dataset!.techniques,
+      dataset.techniques,
       externalId,
     );
 
     if (!targetObjectId) return;
 
     setSelectedTechniqueId(currentDataset, targetObjectId);
-    setNavigationHistory([]);
+    resetNavigationHistory(currentDataset);
     setCurrentDetailObjectId(currentDataset, targetObjectId);
   }
 
@@ -718,18 +689,20 @@ export function TechniqueDetail() {
                 if (targetExternalId) {
                   return (
                     <button
-                      key={`${ref.source_name ?? "ref"}-${index}`}
+                      key={`${label}-${index}`}
                       type="button"
-                      className="reference-link"
+                      className="reference-item reference-item-button"
                       onClick={() =>
                         openInternalTechniqueLink(targetExternalId)
                       }
-                      title={
-                        ref.description ??
-                        `Open ${targetExternalId} in this app`
-                      }
+                      title={ref.description ?? label}
                     >
-                      {label}
+                      <span className="reference-name">{label}</span>
+                      {ref.description && (
+                        <span className="reference-description">
+                          {ref.description}
+                        </span>
+                      )}
                     </button>
                   );
                 }
@@ -737,26 +710,36 @@ export function TechniqueDetail() {
                 if (ref.url) {
                   return (
                     <a
-                      key={`${ref.source_name ?? "ref"}-${index}`}
-                      className="reference-link"
+                      key={`${label}-${index}`}
+                      className="reference-item"
                       href={ref.url}
                       target="_blank"
                       rel="noreferrer"
                       title={ref.description ?? label}
                     >
-                      {label}
+                      <span className="reference-name">{label}</span>
+                      {ref.description && (
+                        <span className="reference-description">
+                          {ref.description}
+                        </span>
+                      )}
                     </a>
                   );
                 }
 
                 return (
-                  <span
-                    key={`${ref.source_name ?? "ref"}-${index}`}
-                    className="reference-pill"
+                  <div
+                    key={`${label}-${index}`}
+                    className="reference-item"
                     title={ref.description ?? label}
                   >
-                    {label}
-                  </span>
+                    <span className="reference-name">{label}</span>
+                    {ref.description && (
+                      <span className="reference-description">
+                        {ref.description}
+                      </span>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -764,32 +747,47 @@ export function TechniqueDetail() {
         </section>
       )}
 
-      <div className="badges">
-        <span className="badge subtle">{detailObject.type}</span>
+      {(tactics.length > 0 || platforms.length > 0) && (
+        <section className="meta-section">
+          {tactics.length > 0 && (
+            <div className="meta-block">
+              <div className="meta-label">Tactics</div>
+              <div className="tag-list">
+                {tactics.map((tactic) => (
+                  <span key={tactic} className="meta-tag">
+                    {tactic}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {tactics.map((tactic) => (
-          <span key={tactic} className="badge">
-            tactic: {tactic}
-          </span>
-        ))}
-
-        {platforms.map((platform) => (
-          <span key={platform} className="badge subtle">
-            {platform}
-          </span>
-        ))}
-      </div>
+          {platforms.length > 0 && (
+            <div className="meta-block">
+              <div className="meta-label">Platforms</div>
+              <div className="tag-list">
+                {platforms.map((platform) => (
+                  <span key={platform} className="meta-tag">
+                    {platform}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <RelatedGroupSection
         title="Outgoing relationships"
         groupedItems={groupedOutgoing}
-        activeObjectId={detailObject.id}
+        activeObjectId={detailObjectId}
         onOpenObject={openObject}
       />
+
       <RelatedGroupSection
         title="Incoming relationships"
         groupedItems={groupedIncoming}
-        activeObjectId={detailObject.id}
+        activeObjectId={detailObjectId}
         onOpenObject={openObject}
       />
     </div>

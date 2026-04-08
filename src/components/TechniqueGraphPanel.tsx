@@ -6,9 +6,7 @@ export function TechniqueGraphPanel() {
   const currentDataset = useAttackStore((s) => s.currentDataset);
   const selectedTechnique = useAttackStore((s) => s.getSelectedTechnique());
   const currentDetailObject = useAttackStore((s) => s.getCurrentDetailObject());
-  const setCurrentDetailObjectId = useAttackStore(
-    (s) => s.setCurrentDetailObjectId,
-  );
+  const openDetailObject = useAttackStore((s) => s.openDetailObject);
 
   if (!dataset) {
     return <div className="panel graph-panel">Loading...</div>;
@@ -19,9 +17,15 @@ export function TechniqueGraphPanel() {
   }
 
   const centerObject = currentDetailObject ?? selectedTechnique;
+  const rootTechniqueId = selectedTechnique.id;
 
   function openGraphObject(objectId: string) {
-    setCurrentDetailObjectId(currentDataset, objectId);
+    openDetailObject(
+      currentDataset,
+      rootTechniqueId,
+      centerObject.id,
+      objectId,
+    );
   }
 
   return (
