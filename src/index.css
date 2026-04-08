@@ -60,16 +60,18 @@ input {
 }
 
 .tab {
-  border: 1px solid #d1d5db;
-  background: white;
-  padding: 10px 14px;
-  border-radius: 10px;
   cursor: pointer;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #4b5563;
 }
 
 .tab.active {
   background: #111827;
-  color: white;
+  color: #fff;
   border-color: #111827;
 }
 
