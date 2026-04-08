@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import { getExternalId } from "../lib/attack-parser";
 import { useAttackStore } from "../store/attack-store";
 import type { Relationship, StixObject } from "../types/attack";
@@ -320,54 +321,44 @@ function MarkdownDescription({
   const resolveReference = (citationName: string) =>
     referenceLookup.get(normalizeReferenceKey(citationName));
 
+  const markdownComponents: Components = {
+    a: ({ href, children, ...props }) => {
+      const targetExternalId =
+        href != null ? extractAttackExternalIdFromUrl(href) : null;
+
+      if (targetExternalId) {
+        return (
+          <button
+            type="button"
+            className="inline-technique-link"
+            onClick={() => onOpenInternalTechniqueLink(targetExternalId)}
+            title={`Open ${targetExternalId} in this app`}
+          >
+            {children}
+          </button>
+        );
+      }
+
+      return (
+        <a {...props} href={href} target="_blank" rel="noreferrer">
+          {children}
+        </a>
+      );
+    },
+    p: ({ children }) => (
+      <p>
+        {decorateNode(children, resolveReference, onOpenInternalTechniqueLink)}
+      </p>
+    ),
+    li: ({ children }) => (
+      <li>
+        {decorateNode(children, resolveReference, onOpenInternalTechniqueLink)}
+      </li>
+    ),
+  };
+
   return (
-    <ReactMarkdown
-      components={{
-        a: ({ href, children, ...props }) => {
-          const targetExternalId =
-            href != null ? extractAttackExternalIdFromUrl(href) : null;
-
-          if (targetExternalId) {
-            return (
-              <button
-                type="button"
-                className="inline-technique-link"
-                onClick={() => onOpenInternalTechniqueLink(targetExternalId)}
-                title={`Open ${targetExternalId} in this app`}
-              >
-                {children}
-              </button>
-            );
-          }
-
-          return (
-            <a {...props} href={href} target="_blank" rel="noreferrer">
-              {children}
-            </a>
-          );
-        },
-        p: ({ children }) => (
-          <p>
-            {decorateNode(
-              children,
-              resolveReference,
-              onOpenInternalTechniqueLink,
-            )}
-          </p>
-        ),
-        li: ({ children }) => (
-          <li>
-            {decorateNode(
-              children,
-              resolveReference,
-              onOpenInternalTechniqueLink,
-            )}
-          </li>
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
   );
 }
 
@@ -454,7 +445,9 @@ export function TechniqueDetail() {
   const [navigationHistory, setNavigationHistory] = useState<NavigationEntry[]>(
     [],
   );
-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [sourcesExpandedFor, setSourcesExpandedFor] = useState<string | null>(
+    null,
+  );
 
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -462,10 +455,6 @@ export function TechniqueDetail() {
     if (panelRef.current) {
       panelRef.current.scrollTop = 0;
     }
-  }, [selectedTechnique?.id, selectedObject?.objectId]);
-
-  useEffect(() => {
-    setSourcesExpanded(false);
   }, [selectedTechnique?.id, selectedObject?.objectId]);
 
   if (!dataset) {
@@ -490,7 +479,7 @@ export function TechniqueDetail() {
       entry.rootTechniqueId === rootTechniqueId &&
       Boolean(
         dataset.objectsById[entry.objectId] ||
-          entry.objectId === rootTechniqueId,
+        entry.objectId === rootTechniqueId,
       ),
   );
 
@@ -504,6 +493,8 @@ export function TechniqueDetail() {
   }
 
   const detailObjectId = detailObject.id;
+  const detailKey = `${selectedTechnique.id}:${detailObjectId}`;
+  const sourcesExpanded = sourcesExpandedFor === detailKey;
 
   const outgoingItems: RelatedItem[] = (
     dataset.relationshipsBySource[detailObjectId] ?? []
@@ -570,19 +561,21 @@ export function TechniqueDetail() {
 
   const ds = dataset;
 
-function openInternalTechniqueLink(externalId: string) {
-  if (!ds) return;
-
-  const targetObjectId = findTechniqueObjectIdByExternalId(
-    ds.techniques,
-    externalId,
-  );
+  function openInternalTechniqueLink(externalId: string) {
+    const targetObjectId = findTechniqueObjectIdByExternalId(
+      ds.techniques,
+      externalId,
+    );
 
     if (!targetObjectId) return;
 
     setSelectedTechniqueId(currentDataset, targetObjectId);
     setSelectedObject(null);
     setNavigationHistory([]);
+  }
+
+  function toggleSourcesExpanded() {
+    setSourcesExpandedFor((prev) => (prev === detailKey ? null : detailKey));
   }
 
   const breadcrumbs = buildBreadcrumbs(
@@ -658,7 +651,7 @@ function openInternalTechniqueLink(externalId: string) {
           <button
             type="button"
             className="reference-toggle"
-            onClick={() => setSourcesExpanded((prev) => !prev)}
+            onClick={toggleSourcesExpanded}
             aria-expanded={sourcesExpanded}
           >
             <span className="reference-toggle-label">
@@ -684,9 +677,12 @@ function openInternalTechniqueLink(externalId: string) {
                       key={`${ref.source_name ?? "ref"}-${index}`}
                       type="button"
                       className="reference-link"
-                      onClick={() => openInternalTechniqueLink(targetExternalId)}
+                      onClick={() =>
+                        openInternalTechniqueLink(targetExternalId)
+                      }
                       title={
-                        ref.description ?? `Open ${targetExternalId} in this app`
+                        ref.description ??
+                        `Open ${targetExternalId} in this app`
                       }
                     >
                       {label}
