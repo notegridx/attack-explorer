@@ -1,16 +1,6 @@
 import { useMemo } from "react";
-import ReactFlow, {
-  Background,
-  Controls,
-  MarkerType,
-  Position,
-  type Edge,
-  type Node,
-  type NodeProps,
-} from "reactflow";
-import "reactflow/dist/style.css";
 import { getExternalId } from "../lib/attack-parser";
-import type { ParsedDataset } from "../types/attack";
+import type { ParsedDataset, Relationship, StixObject } from "../types/attack";
 
 type RelationshipGraphProps = {
   dataset: ParsedDataset;
@@ -19,212 +9,209 @@ type RelationshipGraphProps = {
   onOpenObject: (objectId: string) => void;
 };
 
-type GraphNodeData = {
-  label: string;
-  typeLabel: string;
-  externalId?: string;
-  isCenter: boolean;
-  isActive: boolean;
-  onOpenObject: (objectId: string) => void;
+type RelatedObjectEntry = {
+  objectId: string;
+  relationshipType: string;
+  direction: "outgoing" | "incoming";
+  relationships: Relationship[];
 };
 
-function GraphObjectNode({ id, data }: NodeProps<GraphNodeData>) {
-  const className = [
-    "attack-graph-node",
-    data.isCenter ? "center" : "",
-    data.isActive ? "active" : "",
-    `type-${data.typeLabel.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <button
-      type="button"
-      className={className}
-      onClick={() => data.onOpenObject(id)}
-      title={
-        data.externalId ? `${data.externalId} · ${data.label}` : data.label
-      }
-    >
-      <div className="attack-graph-node-top">
-        <span className="attack-graph-node-type">{data.typeLabel}</span>
-        {data.externalId && (
-          <span className="attack-graph-node-id">{data.externalId}</span>
-        )}
-      </div>
-      <div className="attack-graph-node-label">{data.label}</div>
-    </button>
-  );
-}
-
-const nodeTypes = {
-  objectNode: GraphObjectNode,
+type RelationshipGroup = {
+  relationshipType: string;
+  items: RelatedObjectEntry[];
 };
 
-function buildGraph(
+type DirectionSection = {
+  direction: "outgoing" | "incoming";
+  groups: RelationshipGroup[];
+};
+
+function buildGroupedRelationships(
   dataset: ParsedDataset,
   centerObjectId: string,
-  activeObjectId: string | undefined,
-  onOpenObject: (objectId: string) => void,
-): { nodes: Node<GraphNodeData>[]; edges: Edge[]; hiddenCount: number } {
-  const centerObject = dataset.objectsById[centerObjectId];
-  if (!centerObject) {
-    return { nodes: [], edges: [], hiddenCount: 0 };
-  }
-
-  const nodeMap = new Map<string, Node<GraphNodeData>>();
-  const edgeMap = new Map<string, Edge>();
-
-  const addNode = (
-    objectId: string,
-    position: { x: number; y: number },
-    overrides?: Partial<GraphNodeData>,
-  ) => {
-    const obj = dataset.objectsById[objectId];
-    if (!obj) return;
-
-    const existing = nodeMap.get(objectId);
-    const nextData: GraphNodeData = {
-      label: obj.name ?? obj.id,
-      typeLabel: obj.type,
-      externalId: getExternalId(obj),
-      isCenter: objectId === centerObjectId,
-      isActive: objectId === activeObjectId,
-      onOpenObject,
-      ...overrides,
-    };
-
-    if (existing) {
-      nodeMap.set(objectId, {
-        ...existing,
-        data: nextData,
-      });
-      return;
-    }
-
-    nodeMap.set(objectId, {
-      id: objectId,
-      type: "objectNode",
-      position,
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
-      data: nextData,
-      draggable: false,
-    });
-  };
-
-  const addEdge = (
-    edgeId: string,
-    source: string,
-    target: string,
-    direction: "outgoing" | "incoming",
-  ) => {
-    if (edgeMap.has(edgeId)) return;
-
-    edgeMap.set(edgeId, {
-      id: edgeId,
-      source,
-      target,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-      },
-      animated: false,
-      className:
-        direction === "outgoing"
-          ? "attack-graph-edge outgoing"
-          : "attack-graph-edge incoming",
-    });
-  };
-
+): {
+  sections: DirectionSection[];
+  visibleCount: number;
+  hiddenCount: number;
+} {
   const outgoing = dataset.relationshipsBySource[centerObjectId] ?? [];
   const incoming = dataset.relationshipsByTarget[centerObjectId] ?? [];
 
-  const uniqueOutgoingTargetIds = Array.from(
-    new Set(
-      outgoing
-        .map((rel) => rel.target_ref)
-        .filter(
-          (id) => id !== centerObjectId && Boolean(dataset.objectsById[id]),
-        ),
-    ),
-  );
+  const outgoingByType = new Map<string, Map<string, Relationship[]>>();
+  const incomingByType = new Map<string, Map<string, Relationship[]>>();
 
-  const uniqueIncomingSourceIds = Array.from(
-    new Set(
-      incoming
-        .map((rel) => rel.source_ref)
-        .filter(
-          (id) => id !== centerObjectId && Boolean(dataset.objectsById[id]),
-        ),
-    ),
-  );
+  const collectByType = (
+    relationships: Relationship[],
+    direction: "outgoing" | "incoming",
+  ) => {
+    const container =
+      direction === "outgoing" ? outgoingByType : incomingByType;
 
-  const MAX_OUTGOING = 6;
-  const MAX_INCOMING = 6;
+    relationships.forEach((rel) => {
+      const relatedObjectId =
+        direction === "outgoing" ? rel.target_ref : rel.source_ref;
 
-  const visibleOutgoingTargetIds = uniqueOutgoingTargetIds.slice(
-    0,
-    MAX_OUTGOING,
-  );
-  const visibleIncomingSourceIds = uniqueIncomingSourceIds.slice(
-    0,
-    MAX_INCOMING,
-  );
+      if (!dataset.objectsById[relatedObjectId]) return;
+      if (relatedObjectId === centerObjectId) return;
 
-  const hiddenCount =
-    Math.max(
-      uniqueOutgoingTargetIds.length - visibleOutgoingTargetIds.length,
+      const relationshipType = rel.relationship_type || "unknown";
+
+      if (!container.has(relationshipType)) {
+        container.set(relationshipType, new Map<string, Relationship[]>());
+      }
+
+      const objectMap = container.get(relationshipType)!;
+      if (!objectMap.has(relatedObjectId)) {
+        objectMap.set(relatedObjectId, []);
+      }
+
+      objectMap.get(relatedObjectId)!.push(rel);
+    });
+  };
+
+  collectByType(outgoing, "outgoing");
+  collectByType(incoming, "incoming");
+
+  const MAX_TYPES_PER_DIRECTION = 4;
+  const MAX_OBJECTS_PER_TYPE = 4;
+
+  let hiddenCount = 0;
+  let visibleCount = 0;
+
+  const buildSection = (
+    direction: "outgoing" | "incoming",
+    byType: Map<string, Map<string, Relationship[]>>,
+  ): DirectionSection => {
+    const visibleTypes = Array.from(byType.entries()).slice(
       0,
-    ) +
-    Math.max(
-      uniqueIncomingSourceIds.length - visibleIncomingSourceIds.length,
-      0,
+      MAX_TYPES_PER_DIRECTION,
     );
 
-  const visibleOutgoingSet = new Set(visibleOutgoingTargetIds);
-  const visibleIncomingSet = new Set(visibleIncomingSourceIds);
+    hiddenCount += Math.max(byType.size - visibleTypes.length, 0);
 
-  const verticalSpacing = 90;
-  const leftX = -280;
-  const rightX = 280;
-  const centerY = 80;
+    const groups = visibleTypes.map(([relationshipType, objectMap]) => {
+      const allEntries: RelatedObjectEntry[] = Array.from(
+        objectMap.entries(),
+      ).map(([objectId, relationships]) => ({
+        objectId,
+        relationshipType,
+        direction,
+        relationships,
+      }));
 
-  addNode(centerObjectId, { x: 0, y: centerY }, { isCenter: true });
+      hiddenCount += Math.max(allEntries.length - MAX_OBJECTS_PER_TYPE, 0);
 
-  visibleIncomingSourceIds.forEach((objectId, index) => {
-    const offset =
-      (index - (visibleIncomingSourceIds.length - 1) / 2) * verticalSpacing;
+      const items = allEntries.slice(0, MAX_OBJECTS_PER_TYPE);
+      visibleCount += items.length;
 
-    addNode(objectId, { x: leftX, y: centerY + offset });
-  });
+      return {
+        relationshipType,
+        items,
+      };
+    });
 
-  visibleOutgoingTargetIds.forEach((objectId, index) => {
-    const offset =
-      (index - (visibleOutgoingTargetIds.length - 1) / 2) * verticalSpacing;
-
-    addNode(objectId, { x: rightX, y: centerY + offset });
-  });
-
-  outgoing.forEach((rel) => {
-    if (!visibleOutgoingSet.has(rel.target_ref)) return;
-    if (!dataset.objectsById[rel.target_ref]) return;
-
-    addEdge(rel.id, rel.source_ref, rel.target_ref, "outgoing");
-  });
-
-  incoming.forEach((rel) => {
-    if (!visibleIncomingSet.has(rel.source_ref)) return;
-    if (!dataset.objectsById[rel.source_ref]) return;
-
-    addEdge(rel.id, rel.source_ref, rel.target_ref, "incoming");
-  });
-
-  return {
-    nodes: Array.from(nodeMap.values()),
-    edges: Array.from(edgeMap.values()),
-    hiddenCount,
+    return {
+      direction,
+      groups,
+    };
   };
+
+  const sections = [
+    buildSection("incoming", incomingByType),
+    buildSection("outgoing", outgoingByType),
+  ].filter((section) => section.groups.length > 0);
+
+  return { sections, visibleCount, hiddenCount };
+}
+
+function getObjectTypeClassName(obj?: StixObject) {
+  const typeLabel = obj?.type ?? "unknown";
+  return `type-${typeLabel.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`;
+}
+
+function renderDirectionLabel(direction: "outgoing" | "incoming") {
+  return direction === "outgoing" ? "Outgoing" : "Incoming";
+}
+
+function RelationshipSection({
+  section,
+  dataset,
+  activeObjectId,
+  onOpenObject,
+}: {
+  section: DirectionSection;
+  dataset: ParsedDataset;
+  activeObjectId?: string;
+  onOpenObject: (objectId: string) => void;
+}) {
+  return (
+    <div className={`relationship-tree-section ${section.direction}`}>
+      <div className="relationship-tree-section-title">
+        {renderDirectionLabel(section.direction)}
+      </div>
+
+      <div className="relationship-tree-groups">
+        {section.groups.map((group) => (
+          <div
+            key={`${section.direction}-${group.relationshipType}`}
+            className="relationship-tree-group"
+          >
+            <div className="relationship-tree-branch">
+              <div className="relationship-tree-type-card">
+                <div className="relationship-tree-type-direction">
+                  {renderDirectionLabel(section.direction).toUpperCase()}
+                </div>
+                <div className="relationship-tree-type-name">
+                  {group.relationshipType}
+                </div>
+              </div>
+
+              <div className="relationship-tree-items">
+                {group.items.map((item) => {
+                  const obj = dataset.objectsById[item.objectId];
+                  if (!obj) return null;
+
+                  const externalId = getExternalId(obj);
+                  const isActive = item.objectId === activeObjectId;
+
+                  return (
+                    <div
+                      key={`${section.direction}-${group.relationshipType}-${item.objectId}`}
+                      className="relationship-tree-item-row"
+                    >
+                      <div className="relationship-tree-item-connector" />
+                      <button
+                        type="button"
+                        className={[
+                          "relationship-tree-item-card",
+                          "related-card",
+                          getObjectTypeClassName(obj),
+                          isActive ? "active" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => onOpenObject(item.objectId)}
+                      >
+                        <div className="related-card-topline">
+                          <span className="related-type">{obj.type}</span>
+                          {externalId && (
+                            <span className="related-external-id">
+                              {externalId}
+                            </span>
+                          )}
+                        </div>
+                        <div className="related-name">{obj.name ?? obj.id}</div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function RelationshipGraph({
@@ -233,47 +220,83 @@ export function RelationshipGraph({
   activeObjectId,
   onOpenObject,
 }: RelationshipGraphProps) {
-  const { nodes, edges, hiddenCount } = useMemo(
-    () => buildGraph(dataset, centerObjectId, activeObjectId, onOpenObject),
-    [dataset, centerObjectId, activeObjectId, onOpenObject],
+  const centerObject = dataset.objectsById[centerObjectId];
+
+  const { sections, visibleCount, hiddenCount } = useMemo(
+    () => buildGroupedRelationships(dataset, centerObjectId),
+    [dataset, centerObjectId],
   );
 
-  if (nodes.length <= 1) {
+  const incomingSection = sections.find(
+    (section) => section.direction === "incoming",
+  );
+  const outgoingSection = sections.find(
+    (section) => section.direction === "outgoing",
+  );
+
+  if (!centerObject || visibleCount === 0) {
     return null;
   }
 
   return (
     <section className="related-section">
       <div className="related-section-header">
-        <h3>Relationship graph</h3>
-        <span className="related-section-count">{nodes.length - 1}</span>
+        <h3>Relationship tree</h3>
+        <span className="related-section-count">{visibleCount}</span>
       </div>
 
       {hiddenCount > 0 && (
         <div className="attack-graph-note">
-          Showing the first {nodes.length - 1} related objects in the graph.{" "}
+          Showing a structured subset of related objects in the tree.{" "}
           {hiddenCount} more are available in the relationship lists below.
         </div>
       )}
 
-      <div className="attack-graph-wrapper">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.3, minZoom: 0.75 }}
-          minZoom={0.6}
-          maxZoom={1.8}
-          attributionPosition="bottom-left"
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable
-          proOptions={{ hideAttribution: true }}
-        >
-          <Controls showInteractive={false} />
-          <Background />
-        </ReactFlow>
+      <div className="relationship-tree">
+        {incomingSection && (
+          <RelationshipSection
+            section={incomingSection}
+            dataset={dataset}
+            activeObjectId={activeObjectId}
+            onOpenObject={onOpenObject}
+          />
+        )}
+
+        <div className="relationship-tree-root-wrap">
+          <div
+            className={[
+              "relationship-tree-root",
+              "attack-graph-node",
+              "center",
+              getObjectTypeClassName(centerObject),
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <div className="attack-graph-node-top">
+              <span className="attack-graph-node-type">
+                {centerObject.type}
+              </span>
+              {getExternalId(centerObject) && (
+                <span className="attack-graph-node-id">
+                  {getExternalId(centerObject)}
+                </span>
+              )}
+            </div>
+            <div className="attack-graph-node-label">
+              {centerObject.name ?? centerObject.id}
+            </div>
+          </div>
+        </div>
+
+        {outgoingSection && (
+          <RelationshipSection
+            section={outgoingSection}
+            dataset={dataset}
+            activeObjectId={activeObjectId}
+            onOpenObject={onOpenObject}
+          />
+        )}
       </div>
     </section>
   );

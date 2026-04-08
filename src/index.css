@@ -88,11 +88,11 @@ input {
 }
 
 .three-pane-layout {
-  grid-template-columns: 360px minmax(420px, 1fr) minmax(420px, 0.95fr);
+  grid-template-columns: 350px minmax(420px, 1fr) minmax(360px, 0.82fr);
 }
 
 .panel {
-  background: white;
+  background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 16px;
@@ -329,7 +329,7 @@ input {
   border-radius: 999px;
   padding: 6px 10px;
   background: #111827;
-  color: white;
+  color: #fff;
   font-size: 12px;
 }
 
@@ -419,7 +419,7 @@ input {
 
 .back-link-button {
   border: 1px solid #d1d5db;
-  background: white;
+  background: #fff;
   color: #111827;
   padding: 8px 12px;
   border-radius: 10px;
@@ -738,10 +738,10 @@ span.citation-pill.muted {
   width: 260px;
   text-align: left;
   border: 1px solid #d1d5db;
-  background: #ffffff;
+  background: #fff;
   border-radius: 12px;
   padding: 12px 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
   cursor: pointer;
   transition:
     transform 0.12s ease,
@@ -751,18 +751,18 @@ span.citation-pill.muted {
 
 .attack-graph-node:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.08);
 }
 
 .attack-graph-node.active {
   border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+  box-shadow: 0 0 0 2px rgb(79 70 229 / 0.12);
 }
 
 .attack-graph-node.center {
   border-color: #111827;
   background: #eef2ff;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.08);
+  box-shadow: 0 0 0 2px rgb(79 70 229 / 0.08);
 }
 
 .attack-graph-node-top {
@@ -829,9 +829,196 @@ span.citation-pill.muted {
   stroke: #7c3aed;
 }
 
+.graph-panel-header {
+  margin-bottom: 12px;
+}
+
+.graph-panel-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.graph-panel-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.attack-graph-wrapper .react-flow__edges {
+  z-index: 2;
+}
+
+.attack-graph-wrapper .react-flow__edge-path {
+  stroke-width: 2.5;
+}
+
+.attack-graph-wrapper .react-flow__edge.outgoing .react-flow__edge-path {
+  stroke: #2563eb;
+}
+
+.attack-graph-wrapper .react-flow__edge.incoming .react-flow__edge-path {
+  stroke: #7c3aed;
+}
+
+.attack-graph-wrapper .react-flow__arrowhead path {
+  fill: currentColor;
+}
+
+.attack-graph-wrapper .react-flow__edge.outgoing {
+  color: #2563eb;
+}
+
+.attack-graph-wrapper .react-flow__edge.incoming {
+  color: #7c3aed;
+}
+
+.relationship-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.relationship-tree-root-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.relationship-tree-root {
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.relationship-tree-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.relationship-tree-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relationship-tree-section.incoming {
+  margin-bottom: 4px;
+}
+
+.relationship-tree-section.outgoing {
+  margin-top: 4px;
+}
+
+.relationship-tree-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.relationship-tree-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.relationship-tree-group {
+  position: relative;
+}
+
+.relationship-tree-branch {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.relationship-tree-type-card {
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.relationship-tree-type-direction {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.relationship-tree-type-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.25;
+}
+
+.relationship-tree-items {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 14px;
+}
+
+.relationship-tree-items::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: #e5e7eb;
+}
+
+.relationship-tree-item-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.relationship-tree-item-connector {
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  background: #e5e7eb;
+  transform: translateY(-50%);
+}
+
+.relationship-tree-item-card {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.relationship-tree-item-card .related-card-topline {
+  margin-bottom: 4px;
+}
+
+.relationship-tree-item-card .related-type,
+.relationship-tree-item-card .related-external-id {
+  font-size: 11px;
+}
+
+.relationship-tree-item-card .related-name {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
 @media (max-width: 1280px) {
   .three-pane-layout {
-    grid-template-columns: 320px minmax(380px, 1fr) minmax(360px, 0.9fr);
+    grid-template-columns: 320px minmax(380px, 1fr) minmax(320px, 0.8fr);
   }
 }
 
@@ -893,23 +1080,67 @@ span.citation-pill.muted {
   .attack-graph-node-label {
     font-size: 13px;
   }
+
+  .relationship-tree-branch {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .relationship-tree-items {
+    padding-left: 12px;
+  }
+
+  .relationship-tree-item-connector {
+    width: 12px;
+    left: -12px;
+  }
 }
 
-.graph-panel-header {
-  margin-bottom: 12px;
+.relationship-tree-item-card {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-left-width: 4px;
 }
 
-.graph-panel-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #6b7280;
-  margin-bottom: 4px;
+.relationship-tree-item-card:hover {
+  background: #f3f4f6;
 }
 
-.graph-panel-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
+.relationship-tree-item-card {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: #d1d5db;
+}
+
+.relationship-tree-item-card.type-attack-pattern {
+  border-left-color: #2563eb;
+}
+
+.relationship-tree-item-card.type-malware {
+  border-left-color: #dc2626;
+}
+
+.relationship-tree-item-card.type-intrusion-set {
+  border-left-color: #7c3aed;
+}
+
+.relationship-tree-item-card.type-course-of-action {
+  border-left-color: #059669;
+}
+
+.relationship-tree-item-card.type-tool {
+  border-left-color: #ea580c;
+}
+
+.relationship-tree-item-card.type-campaign {
+  border-left-color: #0891b2;
+}
+
+.relationship-tree-item-card.type-x-mitre-detection-strategy {
+  border-left-color: #0f766e;
 }
