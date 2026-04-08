@@ -10,21 +10,23 @@ const TABS: Array<{ key: DatasetKey; label: string }> = [
 export function DatasetTabs() {
   const currentDataset = useAttackStore((s) => s.currentDataset);
   const setCurrentDataset = useAttackStore((s) => s.setCurrentDataset);
-  const datasets = useAttackStore((s) => s.datasets);
+  const datasetLoadState = useAttackStore((s) => s.datasetLoadState);
 
   return (
     <div className="tabs">
       {TABS.map((tab) => {
-        const loaded = Boolean(datasets[tab.key]);
+        const loadState = datasetLoadState[tab.key];
+        const isCurrent = tab.key === currentDataset;
+
         return (
           <button
             key={tab.key}
-            className={tab.key === currentDataset ? "tab active" : "tab"}
+            className={isCurrent ? "tab active" : "tab"}
             onClick={() => setCurrentDataset(tab.key)}
-            disabled={!loaded}
             type="button"
           >
             {tab.label}
+            {loadState === "loading" ? " …" : ""}
           </button>
         );
       })}

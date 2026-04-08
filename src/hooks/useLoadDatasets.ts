@@ -12,30 +12,35 @@ const DATASET_FILES: Record<DatasetKey, string> = {
 };
 
 export function useLoadDatasets() {
+  const currentDataset = useAttackStore((s) => s.currentDataset);
   const setDataset = useAttackStore((s) => s.setDataset);
+  const setDatasetLoadState = useAttackStore((s) => s.setDatasetLoadState);
 
   useEffect(() => {
-    let cancelled = false;
+    async function loadDataset(key: DatasetKey) {
+      const state = useAttackStore.getState();
 
-    async function load() {
-      for (const [key, path] of Object.entries(DATASET_FILES) as Array<
-        [DatasetKey, string]
-      >) {
-        const response = await fetch(path);
-        const json = await response.json();
-        const parsed = parseAttackBundle(key, json);
-        if (!cancelled) {
-          setDataset(key, parsed);
+      if (state.datasets[key]) return;
+      if (state.datasetLoadState[key] === "loading") return;
+      if (state.datasetLoadState[key] === "loaded") return;
+
+      try {
+        setDatasetLoadState(key, "loading");
+
+        const response = await fetch(DATASET_FILES[key]);
+        if (!response.ok) {
+          throw new Error(`Failed to load ${key} dataset: ${response.status}`);
         }
+
+        const bundle = await response.json();
+        const parsed = parseAttackBundle(key, bundle);
+        setDataset(key, parsed);
+      } catch (error) {
+        console.error(error);
+        setDatasetLoadState(key, "error");
       }
     }
 
-    load().catch((error) => {
-      console.error("Failed to load ATT&CK datasets:", error);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [setDataset]);
+    void loadDataset(currentDataset);
+  }, [currentDataset, setDataset, setDatasetLoadState]);
 }

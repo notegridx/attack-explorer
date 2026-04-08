@@ -8,7 +8,7 @@ Attack Explorer is a React-based single-page application (SPA) designed to make 
 
 ## 🔍 Overview
 
-MITRE ATT&CK is an incredibly valuable knowledge base for understanding adversary behavior.  
+MITRE ATT&CK is an incredibly valuable knowledge base for understanding adversary behavior.
 However, its comprehensiveness can make it difficult to browse and explore.
 
 Attack Explorer focuses on improving usability and discoverability by providing:
@@ -24,8 +24,8 @@ Attack Explorer focuses on improving usability and discoverability by providing:
 
 https://attack.notegridx.dev
 
-> ⚠️ Initial load downloads ~50MB of data  
-> Wi-Fi connection is recommended  
+> ⚠️ Initial load downloads ~50MB of data
+> Wi-Fi connection is recommended
 > PC / tablet is recommended due to the volume of information
 
 ---
@@ -34,9 +34,9 @@ https://attack.notegridx.dev
 
 This project uses the official MITRE ATT&CK STIX dataset:
 
-- Enterprise ATT&CK  
-- Mobile ATT&CK  
-- ICS ATT&CK  
+- Enterprise ATT&CK
+- Mobile ATT&CK
+- ICS ATT&CK
 
 Data is not altered — the application focuses purely on improving the browsing experience.
 
@@ -99,7 +99,7 @@ This project does **not** attempt to replace MITRE ATT&CK.
 
 Instead, it aims to:
 
-> Shift ATT&CK from something you “look up”  
+> Shift ATT&CK from something you “look up”
 > to something you can “interactively explore”
 
 Key principles:
@@ -112,8 +112,8 @@ Key principles:
 
 ## ⚠️ Notes
 
-- This is a client-side SPA  
-- Large dataset (~50MB) is loaded on initial access  
+- This is a client-side SPA
+- Large dataset (~50MB) is loaded on initial access
 - Performance depends on browser and device
 
 ---
@@ -143,4 +143,3 @@ notegridx
 - Advanced filtering / search
 - Graph-based relationship visualization
 - Bookmarking / session persistence
-；；；；；；；；；；；；；；；；；；；；p

@@ -4,11 +4,16 @@ import type { DatasetKey, ParsedDataset, StixObject } from "../types/attack";
 type AttackStore = {
   currentDataset: DatasetKey;
   datasets: Partial<Record<DatasetKey, ParsedDataset>>;
+  datasetLoadState: Record<DatasetKey, "idle" | "loading" | "loaded" | "error">;
   selectedTechniqueId: Partial<Record<DatasetKey, string | null>>;
   searchText: string;
 
   setCurrentDataset: (key: DatasetKey) => void;
   setDataset: (key: DatasetKey, data: ParsedDataset) => void;
+  setDatasetLoadState: (
+    key: DatasetKey,
+    state: "idle" | "loading" | "loaded" | "error",
+  ) => void;
   setSelectedTechniqueId: (dataset: DatasetKey, id: string | null) => void;
   setSearchText: (value: string) => void;
 
@@ -19,6 +24,11 @@ type AttackStore = {
 export const useAttackStore = create<AttackStore>((set, get) => ({
   currentDataset: "enterprise",
   datasets: {},
+  datasetLoadState: {
+    enterprise: "idle",
+    mobile: "idle",
+    ics: "idle",
+  },
   selectedTechniqueId: {},
   searchText: "",
 
@@ -34,12 +44,24 @@ export const useAttackStore = create<AttackStore>((set, get) => ({
           ...state.datasets,
           [key]: data,
         },
+        datasetLoadState: {
+          ...state.datasetLoadState,
+          [key]: "loaded",
+        },
         selectedTechniqueId: {
           ...state.selectedTechniqueId,
           [key]: alreadySelected ?? firstTechniqueId,
         },
       };
     }),
+
+  setDatasetLoadState: (key, loadState) =>
+    set((state) => ({
+      datasetLoadState: {
+        ...state.datasetLoadState,
+        [key]: loadState,
+      },
+    })),
 
   setSelectedTechniqueId: (dataset, id) =>
     set((state) => ({
