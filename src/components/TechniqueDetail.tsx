@@ -13,6 +13,7 @@ import type { Components } from "react-markdown";
 import { getExternalId } from "../lib/attack-parser";
 import { useAttackStore, type NavigationEntry } from "../store/attack-store";
 import type { Relationship, StixObject } from "../types/attack";
+import rehypeRaw from "rehype-raw";
 
 type RelatedItem = {
   rel: Relationship;
@@ -348,7 +349,12 @@ function MarkdownDescription({
   };
 
   return (
-    <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
+    <ReactMarkdown
+  components={markdownComponents}
+  rehypePlugins={[rehypeRaw]}
+>
+  {content}
+</ReactMarkdown>
   );
 }
 

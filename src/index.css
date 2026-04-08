@@ -1389,3 +1389,22 @@ span.citation-pill.muted {
   color: #111827;
   text-decoration: none;
 }
+
+/* Inline code styling */
+code {
+  background-color: #f3f4f6; /* light gray */
+  color: #1f2937;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Code block */
+pre code {
+  display: block;
+  padding: 12px;
+  overflow-x: auto;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+}
