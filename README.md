@@ -8,13 +8,14 @@ Attack Explorer is a React-based single-page application (SPA) designed to make 
 
 ## 🔍 Overview
 
-MITRE ATT&CK is an incredibly valuable knowledge base for understanding adversary behavior.
+MITRE ATT&CK is an incredibly valuable knowledge base for understanding adversary behavior.  
 However, its comprehensiveness can make it difficult to browse and explore.
 
 Attack Explorer focuses on improving usability and discoverability by providing:
 
 - Structured navigation by tactic and technique
 - Drill-down exploration of relationships (techniques, malware, groups, etc.)
+- Visual relationship exploration (tree / graph)
 - Clean, minimal UI optimized for fast browsing
 - Direct use of official STIX datasets (no data modification)
 
@@ -24,9 +25,42 @@ Attack Explorer focuses on improving usability and discoverability by providing:
 
 https://attack.notegridx.dev
 
-> ⚠️ Initial load downloads ~50MB of data
-> Wi-Fi connection is recommended
+> ⚠️ Initial load downloads ~50MB of data  
+> Wi-Fi is strongly recommended  
 > PC / tablet is recommended due to the volume of information
+
+---
+
+## 🧭 UI Overview
+
+Attack Explorer uses a **three-pane layout**:
+
+- **Left pane**: Technique list (by tactic)
+- **Center pane**: Technique / object detail
+- **Right pane**: Relationship visualization (tree / graph)
+
+This enables seamless navigation between techniques, malware, groups, and other ATT&CK objects.
+
+---
+
+## 🚀 Features
+
+- Explore ATT&CK datasets:
+  - Enterprise
+  - Mobile
+  - ICS
+- Technique hierarchy (techniques / sub-techniques)
+- Relationship exploration:
+  - Incoming / outgoing relationships
+  - Grouped by relationship type
+- Relationship Tree UI
+- Graph-based visualization panel
+- Breadcrumb navigation for deep exploration
+- Inline citation linking (no separate reference section)
+- Dataset switching with loading state indication
+- Large dataset download consent modal (~50MB)
+- Info panel with source + GitHub links
+- Responsive UI (mobile supported, desktop recommended)
 
 ---
 
@@ -34,32 +68,40 @@ https://attack.notegridx.dev
 
 This project uses the official MITRE ATT&CK STIX dataset:
 
-- Enterprise ATT&CK
-- Mobile ATT&CK
-- ICS ATT&CK
+- Enterprise ATT&CK  
+- Mobile ATT&CK  
+- ICS ATT&CK  
 
-Data is not altered — the application focuses purely on improving the browsing experience.
+Source repository:  
+https://github.com/mitre-attack/attack-stix-data
 
----
-
-## 🚀 Features
-
-- Explore ATT&CK datasets (Enterprise / Mobile / ICS)
-- View techniques and sub-techniques in a hierarchical structure
-- Navigate relationships (malware, intrusion sets, tools, mitigations)
-- Inline citation linking for references
-- Breadcrumb-based navigation for deep exploration
-- Responsive UI (mobile supported, but desktop recommended)
+Data is not altered — this project focuses purely on improving the browsing experience.
 
 ---
 
-## 🛠 Tech Stack
+## 🛠 Architecture
 
-- React
+### Frontend
+
+- React (SPA)
 - TypeScript
 - Vite
-- Static hosting (Cloudflare Pages)
-- Data hosted on Cloudflare R2
+
+### State Management
+
+- Centralized store (`attack-store`)
+- Dataset switching + load state tracking
+
+### Data Loading
+
+- JSON datasets fetched from Cloudflare R2
+- Lazy loading triggered after user consent
+- ~50MB initial download handled explicitly via modal
+
+### Hosting
+
+- Cloudflare Pages (frontend)
+- Cloudflare R2 (dataset hosting)
 
 ---
 
@@ -87,6 +129,7 @@ http://localhost:5173
 src/
   app/
   components/
+  hooks/
   store/
   lib/
 ```
@@ -99,7 +142,7 @@ This project does **not** attempt to replace MITRE ATT&CK.
 
 Instead, it aims to:
 
-> Shift ATT&CK from something you “look up”
+> Shift ATT&CK from something you “look up”  
 > to something you can “interactively explore”
 
 Key principles:
@@ -107,14 +150,16 @@ Key principles:
 - Preserve original data fidelity
 - Improve UX without abstraction loss
 - Enable intuitive exploration of relationships
+- Minimize cognitive load when navigating large datasets
 
 ---
 
 ## ⚠️ Notes
 
-- This is a client-side SPA
-- Large dataset (~50MB) is loaded on initial access
+- Fully client-side SPA
+- Large dataset (~50MB) is downloaded on first load
 - Performance depends on browser and device
+- Mobile is supported, but desktop experience is recommended
 
 ---
 
@@ -137,9 +182,10 @@ notegridx
 
 ---
 
-## 📌 Future Improvements (optional)
+## 📌 Future Improvements
 
-- Incremental data loading
-- Advanced filtering / search
-- Graph-based relationship visualization
+- Incremental / streaming data loading
+- Advanced filtering & search
+- Graph interaction improvements
+- Performance optimization for large datasets
 - Bookmarking / session persistence
