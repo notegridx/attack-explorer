@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DatasetTabs } from "../components/DatasetTabs";
 import { TechniqueDetail } from "../components/TechniqueDetail";
 import { TechniqueGraphPanel } from "../components/TechniqueGraphPanel.tsx";
@@ -22,8 +22,43 @@ export default function App() {
   const [hasAcceptedLargeDownload, setHasAcceptedLargeDownload] = useState(
     getInitialLargeDownloadConsent,
   );
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+
+  const infoPanelRef = useRef<HTMLDivElement | null>(null);
+  const infoButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useLoadDatasets(hasAcceptedLargeDownload);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (
+        infoPanelRef.current?.contains(target) ||
+        infoButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setIsInfoOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsInfoOpen(false);
+      }
+    }
+
+    if (isInfoOpen) {
+      window.addEventListener("mousedown", handlePointerDown);
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isInfoOpen]);
 
   function handleContinue() {
     window.localStorage.setItem(CONSENT_STORAGE_KEY, "true");
@@ -31,38 +66,67 @@ export default function App() {
     setCurrentDataset("enterprise");
   }
 
+  function toggleInfoPanel() {
+    setIsInfoOpen((prev) => !prev);
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div>
+        <div className="topbar-title-wrap">
           <h1>Attack Explorer</h1>
-          <p className="subtitle">
-            Explore MITRE ATT&CK across Enterprise, Mobile, and ICS datasets ･{" "}
-            <a
-              href="https://github.com/mitre-attack/attack-stix-data"
-              target="_blank"
-              rel="noreferrer"
+
+          <div className="topbar-meta">
+            <button
+              ref={infoButtonRef}
+              type="button"
+              className="topbar-info-button"
+              aria-expanded={isInfoOpen}
+              aria-controls="app-info-panel"
+              onClick={toggleInfoPanel}
             >
-              Source: MITRE ATT&CK STIX Data
-            </a>{" "}
-            ･{" "}
-            <a
-              href="https://github.com/notegridx/attack-explorer"
-              target="_blank"
-              rel="noreferrer"
-              className="subtle-link"
-            >
-              View this project on GitHub
-            </a>
-          </p>
+              Info
+            </button>
+
+            {isInfoOpen && (
+              <div
+                ref={infoPanelRef}
+                id="app-info-panel"
+                className="topbar-info-panel"
+                role="dialog"
+                aria-label="Project information"
+              >
+                <p>
+                  Explore MITRE ATT&amp;CK across Enterprise, Mobile, and ICS
+                  datasets ・･{" "}
+                  <a
+                    href="https://github.com/mitre-attack/attack-stix-data"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Source: MITRE ATT&amp;CK STIX Data
+                  </a>{" "}
+                  ・･{" "}
+                  <a
+                    href="https://github.com/notegridx/attack-explorer"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View this project on GitHub
+                  </a>
+                </p>
+
+                <p className="topbar-info-note">
+                  Initial load downloads approximately 50MB of data. Wi-Fi is
+                  recommended, especially on mobile networks.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
+
         <DatasetTabs />
       </header>
-
-      <div className="dataset-download-notice" role="note">
-        Initial load downloads approximately 50MB of data. Wi-Fi is recommended,
-        especially on mobile networks.
-      </div>
 
       <main className="main-grid three-pane-layout">
         <TechniqueList />
