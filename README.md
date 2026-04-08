@@ -75,7 +75,20 @@ This project uses the official MITRE ATT&CK STIX dataset:
 Source repository:  
 https://github.com/mitre-attack/attack-stix-data
 
-Data is not altered — this project focuses purely on improving the browsing experience.
+Data is not altered — all content is presented as-is from the official dataset.
+This project focuses purely on improving the browsing experience.
+
+---
+
+## Data Usage and License
+
+This project uses data from the MITRE ATT&CK® framework.
+MITRE ATT&CK® is a registered trademark of The MITRE Corporation.
+
+This project is not affiliated with, endorsed by, or sponsored by MITRE.
+
+ATT&CK data is used under MITRE’s terms of use:
+https://attack.mitre.org/resources/terms-of-use/
 
 ---
 
@@ -171,7 +184,7 @@ MIT License
 
 ## 🙌 Acknowledgements
 
-- MITRE ATT&CK
+- MITRE ATT&CK®
 - Official STIX data repository
 
 ---
