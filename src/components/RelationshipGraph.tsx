@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getExternalId } from "../lib/attack-parser";
+import { getExternalId, isActiveAttackObject } from "../lib/attack-parser";
 import type { ParsedDataset, Relationship, StixObject } from "../types/attack";
 
 type RelationshipGraphProps = {
@@ -49,8 +49,9 @@ function buildGroupedRelationships(
     relationships.forEach((rel) => {
       const relatedObjectId =
         direction === "outgoing" ? rel.target_ref : rel.source_ref;
+      const relatedObject = dataset.objectsById[relatedObjectId];
 
-      if (!dataset.objectsById[relatedObjectId]) return;
+      if (!isActiveAttackObject(relatedObject)) return;
       if (relatedObjectId === centerObjectId) return;
 
       const relationshipType = rel.relationship_type || "unknown";
@@ -156,7 +157,7 @@ function RelationshipSection({
               <div className="relationship-tree-items">
                 {group.items.map((item) => {
                   const obj = dataset.objectsById[item.objectId];
-                  if (!obj) return null;
+                  if (!isActiveAttackObject(obj)) return null;
 
                   const externalId = getExternalId(obj);
                   const isActive = item.objectId === activeObjectId;
@@ -221,7 +222,7 @@ export function RelationshipGraph({
     (section) => section.direction === "outgoing",
   );
 
-  if (!centerObject || visibleCount === 0) {
+  if (!isActiveAttackObject(centerObject) || visibleCount === 0) {
     return null;
   }
 

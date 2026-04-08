@@ -17,6 +17,18 @@ export function getExternalId(obj: StixObject): string | undefined {
   return obj.external_references?.find((ref) => ref.external_id)?.external_id;
 }
 
+export function isRevokedOrDeprecated(obj?: StixObject): boolean {
+  if (!obj) {
+    return true;
+  }
+
+  return obj.revoked === true || obj.x_mitre_deprecated === true;
+}
+
+export function isActiveAttackObject(obj?: StixObject): obj is StixObject {
+  return Boolean(obj) && !isRevokedOrDeprecated(obj);
+}
+
 export function parseAttackBundle(
   key: DatasetKey,
   bundle: { objects?: StixObject[] },
@@ -30,25 +42,41 @@ export function parseAttackBundle(
 
   for (const obj of objects) {
     objectsById[obj.id] = obj;
+  }
 
-    if (obj.type === "relationship") {
-      const rel = obj as Relationship;
-      relationships.push(rel);
-
-      if (!relationshipsBySource[rel.source_ref]) {
-        relationshipsBySource[rel.source_ref] = [];
-      }
-      relationshipsBySource[rel.source_ref].push(rel);
-
-      if (!relationshipsByTarget[rel.target_ref]) {
-        relationshipsByTarget[rel.target_ref] = [];
-      }
-      relationshipsByTarget[rel.target_ref].push(rel);
+  for (const obj of objects) {
+    if (obj.type !== "relationship") {
+      continue;
     }
+
+    const rel = obj as Relationship;
+    const sourceObject = objectsById[rel.source_ref];
+    const targetObject = objectsById[rel.target_ref];
+
+    if (
+      !isActiveAttackObject(rel) ||
+      !isActiveAttackObject(sourceObject) ||
+      !isActiveAttackObject(targetObject)
+    ) {
+      continue;
+    }
+
+    relationships.push(rel);
+
+    if (!relationshipsBySource[rel.source_ref]) {
+      relationshipsBySource[rel.source_ref] = [];
+    }
+    relationshipsBySource[rel.source_ref].push(rel);
+
+    if (!relationshipsByTarget[rel.target_ref]) {
+      relationshipsByTarget[rel.target_ref] = [];
+    }
+    relationshipsByTarget[rel.target_ref].push(rel);
   }
 
   const techniques = objects
     .filter((o) => o.type === "attack-pattern")
+    .filter(isActiveAttackObject)
     .sort((a, b) => {
       const aId = getExternalId(a) ?? "";
       const bId = getExternalId(b) ?? "";

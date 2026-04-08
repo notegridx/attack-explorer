@@ -10,7 +10,10 @@ import {
 } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
-import { getExternalId } from "../lib/attack-parser";
+import {
+  getExternalId,
+  isActiveAttackObject,
+} from "../lib/attack-parser";
 import { useAttackStore, type NavigationEntry } from "../store/attack-store";
 import type { Relationship, StixObject } from "../types/attack";
 import rehypeRaw from "rehype-raw";
@@ -186,7 +189,9 @@ function findTechniqueObjectIdByExternalId(
   const normalized = externalId.toUpperCase();
 
   const found = techniques.find(
-    (technique) => getExternalId(technique)?.toUpperCase() === normalized,
+    (technique) =>
+      isActiveAttackObject(technique) &&
+      getExternalId(technique)?.toUpperCase() === normalized,
   );
 
   return found?.id ?? null;
@@ -350,11 +355,11 @@ function MarkdownDescription({
 
   return (
     <ReactMarkdown
-  components={markdownComponents}
-  rehypePlugins={[rehypeRaw]}
->
-  {content}
-</ReactMarkdown>
+      components={markdownComponents}
+      rehypePlugins={[rehypeRaw]}
+    >
+      {content}
+    </ReactMarkdown>
   );
 }
 
@@ -531,19 +536,23 @@ export function TechniqueDetail() {
 
   const outgoingItems: RelatedItem[] = (
     safeDataset.relationshipsBySource[detailObjectId] ?? []
-  ).map((rel) => ({
-    rel,
-    obj: safeDataset.objectsById[rel.target_ref],
-    objectId: rel.target_ref,
-  }));
+  )
+    .map((rel) => ({
+      rel,
+      obj: safeDataset.objectsById[rel.target_ref],
+      objectId: rel.target_ref,
+    }))
+    .filter((item) => isActiveAttackObject(item.obj));
 
   const incomingItems: RelatedItem[] = (
     safeDataset.relationshipsByTarget[detailObjectId] ?? []
-  ).map((rel) => ({
-    rel,
-    obj: safeDataset.objectsById[rel.source_ref],
-    objectId: rel.source_ref,
-  }));
+  )
+    .map((rel) => ({
+      rel,
+      obj: safeDataset.objectsById[rel.source_ref],
+      objectId: rel.source_ref,
+    }))
+    .filter((item) => isActiveAttackObject(item.obj));
 
   function openObject(objectId: string) {
     openDetailObject(currentDataset, rootTechniqueId, detailObjectId, objectId);
@@ -607,8 +616,8 @@ export function TechniqueDetail() {
   const tactics =
     detailObject.type === "attack-pattern"
       ? (detailObject.kill_chain_phases
-        ?.map((phase) => phase.phase_name)
-        .filter(Boolean) ?? [])
+          ?.map((phase) => phase.phase_name)
+          .filter(Boolean) ?? [])
       : [];
 
   const platforms = detailObject.x_mitre_platforms ?? [];
@@ -679,7 +688,9 @@ export function TechniqueDetail() {
               {references.map((ref, index) => {
                 const label = buildReferenceLabel(ref);
                 const targetExternalId =
-                  ref.url != null ? extractAttackExternalIdFromUrl(ref.url) : null;
+                  ref.url != null
+                    ? extractAttackExternalIdFromUrl(ref.url)
+                    : null;
 
                 return (
                   <div
@@ -691,7 +702,9 @@ export function TechniqueDetail() {
                       <button
                         type="button"
                         className="reference-name reference-name-button"
-                        onClick={() => openInternalTechniqueLink(targetExternalId)}
+                        onClick={() =>
+                          openInternalTechniqueLink(targetExternalId)
+                        }
                       >
                         {label}
                       </button>
@@ -711,7 +724,9 @@ export function TechniqueDetail() {
                     )}
 
                     {ref.description && (
-                      <div className="reference-description">{ref.description}</div>
+                      <div className="reference-description">
+                        {ref.description}
+                      </div>
                     )}
                   </div>
                 );

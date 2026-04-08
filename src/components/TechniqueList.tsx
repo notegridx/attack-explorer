@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { getExternalId } from "../lib/attack-parser";
+import {
+  getExternalId,
+  isActiveAttackObject,
+} from "../lib/attack-parser";
 import { useAttackStore } from "../store/attack-store";
 import type { Relationship, StixObject } from "../types/attack";
 
@@ -93,23 +96,31 @@ export function TechniqueList() {
   const techniqueTree = useMemo<TechniqueTreeNode[]>(() => {
     if (!dataset) return [];
 
+    const activeTechniques = dataset.techniques.filter(isActiveAttackObject);
+
     const parentByChildId = new Map<string, string>();
     const childrenByParentId = new Map<string, StixObject[]>();
 
-    for (const technique of dataset.techniques) {
+    for (const technique of activeTechniques) {
       const outgoing = dataset.relationshipsBySource[technique.id] ?? [];
-      const subtechniqueRel = outgoing.find(
-        (rel: Relationship) =>
-          rel.relationship_type === "subtechnique-of" &&
-          dataset.objectsById[rel.target_ref]?.type === "attack-pattern",
-      );
+      const subtechniqueRel = outgoing.find((rel: Relationship) => {
+        if (rel.relationship_type !== "subtechnique-of") {
+          return false;
+        }
+
+        const parentObject = dataset.objectsById[rel.target_ref];
+        return (
+          parentObject?.type === "attack-pattern" &&
+          isActiveAttackObject(parentObject)
+        );
+      });
 
       if (subtechniqueRel) {
         parentByChildId.set(technique.id, subtechniqueRel.target_ref);
       }
     }
 
-    for (const technique of dataset.techniques) {
+    for (const technique of activeTechniques) {
       const parentId = parentByChildId.get(technique.id);
       if (!parentId) continue;
 
@@ -118,7 +129,7 @@ export function TechniqueList() {
       childrenByParentId.set(parentId, siblings);
     }
 
-    const sortedTechniques = [...dataset.techniques].sort((a, b) => {
+    const sortedTechniques = [...activeTechniques].sort((a, b) => {
       const aId = getExternalId(a) ?? "";
       const bId = getExternalId(b) ?? "";
       return (
